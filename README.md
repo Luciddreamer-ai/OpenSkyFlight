@@ -48,6 +48,17 @@ Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
 The server acts as a **caching proxy** for map tiles — every tile downloaded from the internet is automatically saved to `cache/` on disk, so it's never fetched twice.
 
+### Deploy to GitHub Pages (iPad)
+
+The app also runs with **no server at all** — tile URLs switch automatically to direct upstream fetches when no local proxy is detected (`?tiles=proxy|direct` overrides). To play on an iPad straight from Safari:
+
+1. Fork this repo to your GitHub account.
+2. In the fork, open **Settings → Pages**.
+3. Under **Build and deployment**, set **Source** to **Deploy from a branch**, then pick your branch (e.g. `main`) and `/ (root)`.
+4. Wait for the deployment, then open the published `https://<you>.github.io/<repo>/` URL on the iPad.
+
+On touch devices the game enables touch controls automatically, and on Safari it falls back to the WebGL backend (see Browser Support below). Optional test overrides: `?renderer=webgl|webgpu`, `?tiles=proxy|direct`.
+
 ### Development tools (optional)
 
 Install dev dependencies for linting and formatting:
@@ -92,6 +103,20 @@ Available scripts:
 | `Esc` | Release pointer lock / close menu |
 
 > **Keyboard layouts:** Flight controls (WASD) use physical key positions, so they map to ZQSD on AZERTY keyboards. All other shortcuts use the character printed on the key and work identically on any layout.
+
+### Touch controls (iPad / mobile)
+
+On touch devices the app automatically enables touch controls — no pointer lock or keyboard needed:
+
+| Input | Action |
+| --- | --- |
+| Left thumb (floating stick) | Fly: up/down = forward/backward, left/right = strafe |
+| Right thumb (drag) | Look around (yaw / pitch) |
+| `VIEW` button | Toggle cockpit / chase view |
+| `TEX` button | Cycle texture mode |
+| `HUD` button | Toggle HUD |
+
+The stick appears where your left thumb lands. Multi-touch is supported, so you can steer and look at the same time.
 
 Use the right-side control panel to search locations, load terrain, and select texture mode.
 
@@ -205,6 +230,8 @@ OpenSkyFlight uses **WebGPU** for rendering. Browser support varies significantl
 | **Safari** | WebKit + Metal | Very Bad | WebGPU enabled by default since Safari 26 (2025); visual artefacts, flickering, and performance instability due to Metal-specific constraints |
 
 Even with identical WGSL shaders, each browser compiles and optimizes them through a different pipeline, which can produce subtle rendering differences. For the best experience, **use Chrome or a Chromium-based browser**.
+
+> **iPad / Safari:** this fork tries WebGPU first and automatically falls back to the WebGL backend (same scene graph, no rewrite) when WebGPU is missing or fails to initialise. Override with `?renderer=webgl|webgpu`.
 
 ## Data Sources & Attribution
 
