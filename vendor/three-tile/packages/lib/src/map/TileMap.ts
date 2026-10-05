@@ -268,6 +268,7 @@ export class TileMap extends Object3D<TileMapEventMap> {
 				minLevel: this.minLevel,
 				maxLevel: this.maxLevel,
 				LODThreshold: this.LODThreshold,
+				lookahead: this.userData.lookahead ?? null,
 			});
 			// shadow
 			this.rootTile.castShadow = this.castShadow;
