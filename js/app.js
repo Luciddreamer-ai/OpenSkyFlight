@@ -10,6 +10,7 @@ import { MAX_DELTA_TIME } from './constants/physics.js';
 import { createRenderer, createScene, createCamera, setupResizeHandler } from './scene/SceneSetup.js';
 import AdaptiveQualityManager from './rendering/AdaptiveQualityManager.js';
 import InputManager from './input/InputManager.js';
+import TouchControls from './input/TouchControls.js';
 import GeoTerrainManager from './terrain/GeoTerrainManager.js';
 import FlightController from './camera/FlightController.js';
 import ControlPanel from './ui/ControlPanel.js';
@@ -26,6 +27,7 @@ import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
 import FlightPlanRecorder from './flightplan/FlightPlanRecorder.js';
 import Stats from 'stats.js';
+import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
 async function initApp() {
   // --- Core scene ---
@@ -40,6 +42,10 @@ async function initApp() {
   cloudLayer.mesh.renderOrder = CLOUD_RENDER_ORDER;
 
   // --- Terrain ---
+  // Resolve tile serving mode first: local caching proxy vs direct upstream
+  // fetches (direct mode is what makes GitHub Pages / iPad work).
+  await detectTileMode();
+  Logger.info('App', `Tile mode: ${getTileMode()}`);
   const geoTerrainManager = new GeoTerrainManager(scene, renderer);
   geoTerrainManager.init(CONFIG.lat, CONFIG.lon);
 
@@ -233,6 +239,13 @@ async function initApp() {
       benchmarkRunner.start(flightController, camera, gpuTimer, userPlan);
     }
   });
+
+  // --- Touch controls (iPad / mobile) ---
+  // Virtual joystick + drag-to-look. Desktop keyboard/mouse path is untouched.
+  if (TouchControls.isTouchDevice()) {
+    new TouchControls(flightController);
+    Logger.info('App', 'Touch controls enabled');
+  }
 
   // --- Render loop ---
   let prevTime = performance.now();
