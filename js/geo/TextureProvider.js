@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { acquireFetch, releaseFetch } from './fetchSemaphore.js';
+import { tileUrl } from './TileUrls.js';
 import Logger from '../utils/Logger.js';
 export default class TextureProvider {
   constructor() {
@@ -39,7 +40,7 @@ export default class TextureProvider {
     try {
       if (this._cache.has(key)) return this._cache.get(key);
 
-      const url = `tiles/${source}/${zoom}/${tileX}/${tileY}.png`;
+      const url = tileUrl(source, zoom, tileX, tileY);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to load ${source} tile: ${url}`);
       const blob = await response.blob();

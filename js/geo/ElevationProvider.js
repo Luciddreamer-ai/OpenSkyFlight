@@ -3,6 +3,7 @@
 // Encoding: height = (R * 256 + G + B / 256) - 32768
 
 import { acquireFetch, releaseFetch } from './fetchSemaphore.js';
+import { tileUrl } from './TileUrls.js';
 import Logger from '../utils/Logger.js';
 export default class ElevationProvider {
   constructor() {
@@ -36,7 +37,7 @@ export default class ElevationProvider {
       // Check cache again — another request may have populated it while queued
       if (this._cache.has(key)) return this._cache.get(key);
 
-      const url = `tiles/terrarium/${zoom}/${tileX}/${tileY}.png`;
+      const url = tileUrl('terrarium', zoom, tileX, tileY);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Tile fetch failed (${response.status}): ${url}`);
       const blob = await response.blob();
