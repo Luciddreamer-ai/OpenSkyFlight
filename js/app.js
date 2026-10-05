@@ -250,6 +250,14 @@ async function initApp() {
   // --- Render loop ---
   let prevTime = performance.now();
   let _bankRoll = 0;
+  let _booted = false; // boot overlay dismissed after first rendered frame
+  // Velocity-lookahead state: project the LOD focal point ahead of motion so
+  // terrain tiles along the flight path subdivide/download before arrival.
+  const _prevCamPos = new THREE.Vector3();
+  let _prevCamPosInit = false;
+  const _lookaheadPoint = new THREE.Vector3();
+  const LOOKAHEAD_TIME = 8; // seconds of flight to project ahead
+  const LOOKAHEAD_MIN_SPEED = 25; // m/s — below this, no lookahead
 
   function animate() {
     requestAnimationFrame(animate);
@@ -342,6 +350,31 @@ async function initApp() {
 
     // --- Terrain phase ---
     if (timer) timer.begin('terrain');
+    // Velocity lookahead: feed the tile LOD system a focal point ahead of the
+    // aircraft so high-detail tiles stream in along the flight path early.
+    if (dt > 0) {
+      if (!_prevCamPosInit) {
+        _prevCamPos.copy(camera.position);
+        _prevCamPosInit = true;
+      }
+      const speed = _prevCamPos.distanceTo(camera.position) / dt;
+      const tileMap = geoTerrainManager.tileMap;
+      if (tileMap && speed > LOOKAHEAD_MIN_SPEED) {
+        _lookaheadPoint
+          .copy(camera.position)
+          .sub(_prevCamPos)
+          .multiplyScalar(LOOKAHEAD_TIME / dt)
+          .add(camera.position);
+        _lookaheadPoint.y = Math.max(_lookaheadPoint.y, 0);
+        tileMap.userData.lookahead = {
+          point: _lookaheadPoint,
+          radius: Math.min(Math.max(speed * 6, 1500), 20000),
+        };
+      } else if (tileMap) {
+        tileMap.userData.lookahead = null;
+      }
+      _prevCamPos.copy(camera.position);
+    }
     geoTerrainManager.update(camera.position);
     if (timer) timer.end('terrain');
 
@@ -361,6 +394,12 @@ async function initApp() {
     renderer.render(scene, camera);
     gpuTimer.endFrame();
     if (timer) timer.end('render');
+
+    // Dismiss the boot overlay once the first frame is on screen
+    if (!_booted) {
+      _booted = true;
+      document.getElementById('boot-overlay')?.classList.add('hidden');
+    }
 
     // --- Overlay phase ---
     if (timer) timer.begin('hud');
@@ -384,4 +423,16 @@ async function initApp() {
 
 initApp().catch((err) => {
   console.error('Failed to initialize application:', err);
+  // Never leave the user staring at a black screen: surface the failure.
+  const overlay = document.getElementById('boot-overlay');
+  const status = document.getElementById('boot-status');
+  const errBox = document.getElementById('boot-error');
+  if (overlay && status && errBox) {
+    overlay.classList.remove('hidden');
+    status.textContent = 'Could not start the 3D engine on this device.';
+    errBox.style.display = 'block';
+    errBox.textContent =
+      'Details: ' + String((err && err.message) || err) +
+      '\n\nTry ?renderer=webgl for the WebGL fallback, or a browser with WebGPU support.';
+  }
 });
