@@ -16,6 +16,7 @@ export default class FlightController {
     this.yawRate = 0;
     this.pitchRate = 0;
     this.keys = {};
+    this.touchMove = { x: 0, y: 0 }; // virtual joystick: x = strafe, y = forward (-1..1)
     this.locked = false;
     this.enabled = true;
 
@@ -45,7 +46,8 @@ export default class FlightController {
   }
 
   _onClick() {
-    if (!this.locked) {
+    // requestPointerLock doesn't exist on iPad Safari — guard it
+    if (!this.locked && typeof this.domElement.requestPointerLock === 'function') {
       this.domElement.requestPointerLock();
     }
   }
@@ -81,6 +83,27 @@ export default class FlightController {
     this.pitch = pitch;
     this._pendingYaw = 0;
     this._pendingPitch = 0;
+  }
+
+  /**
+   * Touch look: pixel deltas, same sign convention as mouse movement.
+   * Used by TouchControls on touch devices (no pointer lock on iPad).
+   */
+  addLook(dxPx, dyPx) {
+    const s = CONFIG.mouseSensitivity;
+    this.yawRate = -dxPx * s;
+    this.pitchRate = -dyPx * s;
+    this._pendingYaw += -dxPx * s;
+    this._pendingPitch += -dyPx * s;
+  }
+
+  /**
+   * Touch movement stick: x = strafe (-1..1), y = forward (-1..1).
+   * Consumed in update() alongside the keyboard state.
+   */
+  setTouchMove(x, y) {
+    this.touchMove.x = Math.max(-1, Math.min(1, x));
+    this.touchMove.y = Math.max(-1, Math.min(1, y));
   }
 
   update(dt) {
@@ -136,6 +159,13 @@ export default class FlightController {
     if (this.keys['ArrowRight'] || this.keys['KeyD']) {
       mx += rx;
       mz += rz;
+    }
+
+    // Touch virtual joystick (iPad / mobile) — same frame as keyboard
+    if (this.touchMove.x !== 0 || this.touchMove.y !== 0) {
+      mx += rx * this.touchMove.x + fx * this.touchMove.y;
+      my += fy * this.touchMove.y;
+      mz += rz * this.touchMove.x + fz * this.touchMove.y;
     }
 
     const len = Math.sqrt(mx * mx + my * my + mz * mz);
