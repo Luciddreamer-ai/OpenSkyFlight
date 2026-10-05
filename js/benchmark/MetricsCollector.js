@@ -212,8 +212,9 @@ export default class MetricsCollector {
 
     try {
       if (renderer.backend) {
-        backend = 'WebGPU';
-        gpuTimestamp = !!renderer.backend.trackTimestamp;
+        const isWebGPU = renderer.backend.isWebGPUBackend === true;
+        backend = isWebGPU ? 'WebGPU' : 'WebGL (TSL fallback)';
+        gpuTimestamp = isWebGPU && !!renderer.backend.trackTimestamp;
         const adapter = renderer.backend.adapter;
         if (adapter) {
           const info = adapter.info || adapter;

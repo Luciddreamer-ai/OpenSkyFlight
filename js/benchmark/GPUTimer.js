@@ -17,8 +17,9 @@ export default class GPUTimer {
     this._lastGPUTimeMs = 0;
     this._cpuRenderStart = 0;
 
-    // Detect backend: WebGPURenderer exposes a .backend property
-    this._isWebGPU = !!renderer.backend;
+    // Detect backend: WebGPURenderer exposes a .backend property; with the
+    // forceWebGL fallback that backend is a WebGLBackend, not WebGPU.
+    this._isWebGPU = !!(renderer.backend && renderer.backend.isWebGPUBackend);
     this._hasTimestampQuery = false;
 
     if (this._isWebGPU) {
