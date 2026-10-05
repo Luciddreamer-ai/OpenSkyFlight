@@ -28,6 +28,12 @@ const cameraWorldPosition = new Vector3();
 const viewCenterGround = new Vector3();
 /** Radius around viewCenterGround within which hi-res boost applies */
 let viewCenterRadius = 1;
+/** Velocity-lookahead focal point (world coords): tiles near here get LOD boost */
+const lookaheadPoint = new Vector3();
+/** Radius around lookaheadPoint within which the lookahead boost applies */
+let lookaheadRadius = 1;
+/** Whether a velocity lookahead is currently active */
+let lookaheadActive = false;
 /** 场景视锥体 */
 const frustum = new FrustumEx();
 /** 临时变量 */
@@ -46,6 +52,9 @@ export type TileUpdateParames = {
 	maxLevel: number;
 	/** 瓦片LOD阈值 */
 	LODThreshold: number;
+	/** Velocity lookahead focal point (world coords) for prefetching tiles
+	 * ahead of motion; null/undefined disables the lookahead boost. */
+	lookahead?: { point: Vector3; radius: number } | null;
 };
 
 /**
@@ -115,6 +124,16 @@ export class Tile extends Object3D<TTileEventMap> {
 		const dz = this._checkPoint.z - viewCenterGround.z;
 		const dist = Math.sqrt(dx * dx + dz * dz);
 		return Math.max(0, Math.min(1, 1 - dist / viewCenterRadius));
+	}
+
+	/** Factor [0,1] indicating how close this tile is to the velocity-lookahead
+	 * point (0 when no lookahead is active) */
+	public get lookaheadFactor(): number {
+		if (!lookaheadActive) return 0;
+		const dx = this._checkPoint.x - lookaheadPoint.x;
+		const dz = this._checkPoint.z - lookaheadPoint.z;
+		const dist = Math.sqrt(dx * dx + dz * dz);
+		return Math.max(0, Math.min(1, 1 - dist / lookaheadRadius));
 	}
 
 	/** 瓦片是否在视锥体内 */
@@ -242,6 +261,16 @@ export class Tile extends Object3D<TTileEventMap> {
 			}
 			// Boost radius proportional to camera altitude
 			viewCenterRadius = Math.max(500, cameraWorldPosition.y * 2);
+			// Velocity lookahead: project a second LOD focal point ahead of
+			// motion so tiles along the flight path subdivide/download early
+			const lh = params.lookahead;
+			if (lh && lh.radius > 0) {
+				lookaheadPoint.copy(lh.point);
+				lookaheadRadius = lh.radius;
+				lookaheadActive = true;
+			} else {
+				lookaheadActive = false;
+			}
 		}
 
 		// 计算瓦片大小、包围盒等

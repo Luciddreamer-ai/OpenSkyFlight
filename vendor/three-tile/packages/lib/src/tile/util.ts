@@ -29,11 +29,11 @@ export function LODEvaluate(tile: Tile, minLevel: number, maxLevel: number, thre
 	const distRatio = tile.distRatio;
 	// LOD compensation for high zoom levels: boost threshold so that tiles
 	// beyond zoom 13 subdivide at greater camera distances. The boost is
-	// maximal at the view center and fades to zero at 60°+ off-axis.
+	// maximal at the view center / velocity-lookahead point and fades with distance.
 	let effectiveThreshold = threshold;
 	if (tile.z > 13) {
 		const compensation = Math.pow(1.4, tile.z - 13);
-		const centerFactor = tile.viewCenterFactor;
+		const centerFactor = Math.max(tile.viewCenterFactor, tile.lookaheadFactor);
 		effectiveThreshold = threshold * (1 + (compensation - 1) * centerFactor);
 	}
 	if (
