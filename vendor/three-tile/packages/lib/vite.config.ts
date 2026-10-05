@@ -18,5 +18,15 @@ export default defineConfig({
 				},
 			},
 		},
+		// Vite 8+ (rolldown): same externals under the new key
+		rolldownOptions: {
+			external: ["three", "three/tsl", /^three\/examples\/.*/],
+			output: {
+				globals: {
+					three: "THREE",
+					"three/tsl": "THREE",
+				},
+			},
+		},
 	},
 });

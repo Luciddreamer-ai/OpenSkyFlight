@@ -45,5 +45,9 @@
 	"bugs": {
 		"url": "https://github.com/sxguojf/three-tile/issues"
 	},
-	"homepage": "https://github.com/sxguojf/three-tile#readme"
+	"homepage": "https://github.com/sxguojf/three-tile#readme",
+	"dependencies": {
+		"typescript": "^7.0.2",
+		"vite": "^6.4.3"
+	}
 }
