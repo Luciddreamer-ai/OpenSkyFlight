@@ -543,3 +543,72 @@ canvas {
   color: #ff4444;
   border: 1px solid #660000;
 }
+
+/* ---------------- Touch controls (iPad / mobile) ---------------- */
+/* Shown only when JS detects a touch device (body.touch). */
+#canvas-container,
+#canvas-container canvas {
+  touch-action: none;
+}
+body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#touch-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  display: none;
+}
+body.touch #touch-ui {
+  display: block;
+}
+#tc-stick-base {
+  position: fixed;
+  display: none;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+#tc-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  margin: -27px 0 0 -27px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+#tc-buttons {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+}
+#tc-buttons button {
+  pointer-events: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(20, 30, 40, 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  -webkit-tap-highlight-color: transparent;
+}
+#tc-buttons button:active {
+  background: rgba(80, 140, 200, 0.6);
+}
