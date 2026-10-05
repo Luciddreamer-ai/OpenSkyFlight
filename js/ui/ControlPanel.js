@@ -54,6 +54,13 @@ export default class ControlPanel {
     trigger.addEventListener('mouseleave', scheduleHide);
     this.panel.addEventListener('mouseenter', showPanel);
     this.panel.addEventListener('mouseleave', scheduleHide);
+
+    // Touch devices have no hover: tapping the trigger strip toggles the panel.
+    // (On touch the strip also sits above the open panel via CSS, so it stays tappable.)
+    trigger.addEventListener('click', () => {
+      clearTimeout(this._hideTimeout);
+      this.panel.classList.toggle('visible');
+    });
   }
 
   _setupRealworldControls() {
