@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { TileMap, TileSource, applyTerrariumElevation } from 'three-tile';
 import { CONFIG, onChange } from '../utils/config.js';
 import ElevationProvider from '../geo/ElevationProvider.js';
+import { tileTemplate } from '../geo/TileUrls.js';
 
 // Web Mercator constants (WGS84)
 const EARTH_RAD = 6378137;
@@ -68,9 +69,7 @@ export default class GeoTerrainManager {
 
     // Image source — satellite or OSM tiles
     const imgSource = new TileSource({
-      url: CONFIG.textureMode === 'osm'
-        ? '/tiles/osm/{z}/{x}/{y}.png'
-        : '/tiles/satellite/{z}/{x}/{y}.png',
+      url: tileTemplate(CONFIG.textureMode === 'osm' ? 'osm' : 'satellite'),
       dataType: 'image',
       minLevel: 0,
       maxLevel: effectiveZoom,
@@ -78,7 +77,7 @@ export default class GeoTerrainManager {
 
     // DEM source — Terrarium PNG tiles, GPU-decoded via TSL
     const demSource = new TileSource({
-      url: '/tiles/terrarium/{z}/{x}/{y}.png',
+      url: tileTemplate('terrarium'),
       dataType: 'terrarium-shader',
       minLevel: 0,
       maxLevel: 15, // AWS Terrarium caps at zoom 15
