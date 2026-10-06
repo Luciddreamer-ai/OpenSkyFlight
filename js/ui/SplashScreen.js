@@ -1,9 +1,21 @@
 // Splash screen: aircraft selection hangar.
-// Shows on load, populates the plane grid from PlaneFactory, handles selection.
+// Shows on load, populates the plane grid, handles selection.
 // The chosen plane is stored in localStorage and passed via ?plane= URL param.
+// NOTE: Plane list is hardcoded here (not imported from PlaneFactory) to avoid
+// module dependency issues — the splash must work even if 3D modules fail.
 
-import { PLANES } from '../aircraft/planes/PlaneFactory.js';
 import Logger from './Logger.js';
+
+const PLANES = {
+  rafale: { name: 'Rafale', desc: 'Interceptor jet — fast and agile' },
+  cub: { name: 'Bush Cub', desc: 'Backcountry legend — slow, lands anywhere' },
+  otter: { name: 'Twin Otter', desc: 'Arctic workhorse — stable and roomy' },
+  atr: { name: 'ATR 72', desc: 'Twin turboprop airliner — the Alaska commuter' },
+  biplane: { name: 'Barnstormer', desc: 'Vintage biplane — pure joy' },
+  beaver: { name: 'Floatplane', desc: 'De Havilland Beaver — lands on water' },
+  extra: { name: 'Aerobat', desc: 'Competition stunt plane — turns on a dime' },
+  jayhawk: { name: 'Jayhawk', desc: 'Coast Guard helicopter — hover and rescue' },
+};
 
 const STORAGE_KEY = 'osf_plane';
 
