@@ -33,10 +33,8 @@ import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
 async function initApp() {
   // Show the hangar picker immediately — before any async init that might hang.
-  // The grid populates from the static PLANES registry. The TAKE OFF button
-  // stays disabled until the world is ready.
-  const flyBtn = document.getElementById('fly-button');
-  if (flyBtn) flyBtn.disabled = true;
+  // The grid populates from the static PLANES registry. TAKE OFF is clickable
+  // right away; the world catches up in the background.
   let _splashPlaneType = 'rafale';
   let _takeoffClicked = false;
   try {
@@ -228,7 +226,6 @@ async function initApp() {
   // expose loadSelectedPlane so the callback can trigger it.
   window.__osfTakeoff = loadSelectedPlane;
   if (_takeoffClicked) loadSelectedPlane();
-  if (flyBtn) flyBtn.disabled = false;
 
   // --- Systems ---
   const benchmarkRunner = new BenchmarkRunner();
