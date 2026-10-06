@@ -38,7 +38,7 @@
   <canvas id="hud"></canvas>
   <!-- Touch throttle: vertical cruise slider, wired up by TouchControls on touch devices -->
   <div id="throttle-slider" aria-label="Throttle">
-    <div id="throttle-readout">30%</div>
+    <div id="throttle-readout">10%</div>
     <div id="throttle-track">
       <div id="throttle-fill"></div>
       <div id="throttle-knob"></div>
@@ -46,6 +46,27 @@
     <div id="throttle-label">THR</div>
   </div>
 <div id="crosshair"></div>
+  <!-- Location picker: search any place on Earth (Nominatim) or jump to a preset -->
+  <div id="location-dialog" style="display:none;" aria-label="Choose flight location">
+    <div class="loc-card">
+      <button id="loc-close" type="button" aria-label="Close">✕</button>
+      <div class="loc-title">FLY SOMEWHERE</div>
+      <div class="loc-row">
+        <input id="loc-search" type="text" placeholder="City, place, landmark…" autocomplete="off" enterkeyhint="go" />
+        <button id="loc-go" type="button">FLY</button>
+      </div>
+      <div class="loc-presets">
+        <button type="button" data-lat="47.6062" data-lon="-122.3321">Seattle</button>
+        <button type="button" data-lat="36.1069" data-lon="-112.1129">Grand Canyon</button>
+        <button type="button" data-lat="45.8326" data-lon="6.8652">Mont Blanc</button>
+        <button type="button" data-lat="35.6762" data-lon="139.6503">Tokyo</button>
+        <button type="button" data-lat="40.7128" data-lon="-74.0060">New York</button>
+        <button type="button" data-lat="-33.8688" data-lon="151.2093">Sydney</button>
+        <button type="button" data-random="1">Random</button>
+      </div>
+      <div id="loc-status"></div>
+    </div>
+  </div>
   <div id="hires-badge" style="display:none;">HI-RES Z18</div>
   <div id="help">
     Click to capture mouse | Mouse : steer flight<br>
