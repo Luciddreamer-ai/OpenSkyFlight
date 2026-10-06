@@ -28,12 +28,12 @@
 </head>
 <body>
   <div id="canvas-container"></div>
-  <!-- Splash screen: game mode + aircraft selection -->
-  <div id="splash-screen">
+  <!-- Aircraft hangar: in-game overlay menu (not a blocking splash) -->
+  <div id="splash-screen" class="hidden">
     <div class="splash-inner">
       <div class="splash-title">OPEN SKY FLIGHT</div>
       <div class="splash-subtitle">Sitka, Alaska</div>
-      <div class="splash-version" style="font-size:10px;color:#556;letter-spacing:2px;margin-bottom:12px;">v2026.10.06c</div>
+      <div class="splash-version" style="font-size:10px;color:#556;letter-spacing:2px;margin-bottom:12px;">v2026.10.06d</div>
       <div class="splash-section">
         <div class="splash-label">Choose your aircraft</div>
         <div id="plane-grid"></div>
@@ -41,7 +41,7 @@
       <button id="fly-button" class="splash-fly">TAKE OFF ✈</button>
     </div>
   </div>
-  <div id="boot-overlay" class="hidden">
+  <div id="boot-overlay">
     <div class="boot-inner">
       <div class="boot-title">OPEN SKY FLIGHT</div>
       <div class="boot-status" id="boot-status">Loading Sitka…</div>
@@ -212,6 +212,6 @@
     </div><!-- /mfd-body -->
   </div>
 
-  <script type="module" src="js/app.js?v=20261006c"></script>
+  <script type="module" src="js/app.js?v=20261006d"></script>
 </body>
 </html>
