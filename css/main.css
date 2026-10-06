@@ -669,8 +669,7 @@ body.touch #touch-ui {
   background: rgba(80, 140, 200, 0.6);
 }
 
-/* ── Touch throttle slider (left edge, touch devices only) ── */
-#throttle-slider {
+/* ── Touch throttle slider (left edge, touch devices only) ── */#throttle-slider {
   display: none;
   position: fixed;
   left: max(10px, env(safe-area-inset-left));
@@ -735,4 +734,101 @@ body.touch #throttle-slider {
 #throttle-label {
   font-size: 10px;
   color: var(--color-text);
+}
+
+/* ── Location picker dialog ── */
+#location-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 20px;
+  box-sizing: border-box;
+}
+.loc-card {
+  position: relative;
+  width: min(420px, 92vw);
+  background: rgba(12, 18, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 18px 16px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  font-family: inherit;
+}
+.loc-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+#loc-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+.loc-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+#loc-search {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 16px;
+}
+#loc-search::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+#loc-go {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #2f7fd0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#loc-go:active {
+  background: #3f97e8;
+}
+.loc-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.loc-presets button {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.loc-presets button:active {
+  background: rgba(80, 140, 200, 0.5);
+}
+#loc-status {
+  margin-top: 10px;
+  min-height: 18px;
+  font-size: 13px;
+  color: #ffcf7d;
 }
