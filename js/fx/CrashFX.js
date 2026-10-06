@@ -28,15 +28,26 @@ const QUIPS = [
   'Controlled flight into terrain. Emphasis on "into".',
 ];
 
+const WATER_QUIPS = [
+  'Splashdown. The fish have filed a complaint.',
+  'That is not how seaplanes work.',
+  'You have selected: the ocean.',
+  'The water was harder than it looked.',
+  'Ditching complete. 3 out of 10 for style.',
+  'The coast guard has been notified.',
+  'Somewhere, a lifeguard just facepalmed.',
+];
+
 const TYPE_LABELS = {
   fireball: 'FIREBALL',
   skid: 'SKIDDED OUT',
   cartwheel: 'CARTWHEEL!',
   bump: 'GENTLE BUMP',
+  splash: 'SPLASHDOWN!',
 };
 
 // Camera shake amplitude (meters) per crash type; decays over CRASH_DURATION.
-const SHAKE_AMP = { fireball: 4.0, skid: 2.0, cartwheel: 2.0, bump: 0.8 };
+const SHAKE_AMP = { fireball: 4.0, skid: 2.0, cartwheel: 2.0, bump: 0.8, splash: 1.2 };
 
 export default class CrashFX {
   constructor(scene) {
@@ -175,6 +186,23 @@ export default class CrashFX {
       this._grav[i] = 320; // falls fast
       this._drag[i] = 0.6;
       this._baseAlpha[i] = 1.0;
+    } else if (kind === 'splash') {
+      const w = 0.75 + r() * 0.25; // white to pale cyan
+      this._col[i3] = w * 0.82;
+      this._col[i3 + 1] = w * 0.94;
+      this._col[i3 + 2] = w;
+      const sp = 25 + r() * 55;
+      const th = r() * Math.PI * 2;
+      const up = 0.75 + r() * 0.6; // mostly-upward cone: the plume
+      this._vel[i3] = Math.cos(th) * sp * 0.45;
+      this._vel[i3 + 1] = sp * up;
+      this._vel[i3 + 2] = Math.sin(th) * sp * 0.45;
+      this._life[i] = this._maxLife[i] = 0.7 + r() * 0.7;
+      this._baseSize[i] = 10 + r() * 10;
+      this._grow[i] = 6;
+      this._grav[i] = 260; // arcs back down into the water
+      this._drag[i] = 0.8;
+      this._baseAlpha[i] = 0.9;
     } else { // 'dust'
       const t = 0.72 + r() * 0.1;
       this._col[i3] = t;
@@ -281,7 +309,8 @@ export default class CrashFX {
   }
 
   showBanner() {
-    this._quipEl.textContent = QUIPS[(Math.random() * QUIPS.length) | 0];
+    const quips = this.type === 'splash' ? WATER_QUIPS : QUIPS;
+    this._quipEl.textContent = quips[(Math.random() * quips.length) | 0];
     this._subEl.textContent = TYPE_LABELS[this.type] || '';
     this._banner.style.display = 'flex';
   }
@@ -294,7 +323,7 @@ export default class CrashFX {
 
   /**
    * Begin a crash animation.
-   * @param {string} type 'fireball' | 'skid' | 'cartwheel' | 'bump'
+   * @param {string} type 'fireball' | 'skid' | 'cartwheel' | 'bump' | 'splash'
    * @param {object} fc the FlightController (tumbled directly)
    * @param {function} groundAt (x, z) => ground elevation in meters
    * @param {THREE.Vector3} impactVel aircraft velocity at impact (m/s)
@@ -333,6 +362,13 @@ export default class CrashFX {
       this.spinRate = 5.5;
       this.burst(p.x, p.y, p.z, 'dust', 22);
       this.burst(p.x, p.y, p.z, 'smoke', 10);
+    } else if (type === 'splash') {
+      this.vel.multiplyScalar(0.2);
+      this.vel.y = Math.min(this.vel.y, 0);
+      this.spinAxis.set(1, 0, 0);
+      this.spinRate = 0.25; // gentle nose-down settle into the water
+      this.burst(p.x, p.y, p.z, 'splash', 60);
+      this.burst(p.x, p.y, p.z, 'splash', 30);
     } else { // 'bump'
       this.vel.multiplyScalar(0.15);
       this.vel.y = 0;
@@ -392,6 +428,13 @@ export default class CrashFX {
         this.burst(p.x, p.y, p.z, 'dust', 2);
         if (Math.random() < 0.4) this.burst(p.x, p.y, p.z, 'smoke', 1);
       }
+    } else if (this.type === 'splash') {
+      this.vel.multiplyScalar(Math.max(0, 1 - 2.0 * dt));
+      p.addScaledVector(this.vel, dt);
+      // settle onto the water with a gentle bob
+      const bob = Math.sin(this.t * 3.0) * 1.2 * Math.max(0, 1 - this.t / CRASH_DURATION);
+      p.y += (ground + 1.5 + bob - p.y) * Math.min(1, 3 * dt);
+      if (!done && this.t < 1.2) this.burst(p.x, p.y, p.z, 'splash', 4);
     } else { // 'bump'
       const k = Math.min(1, this.t / 0.9);
       p.y = ground + 2 + Math.sin(k * Math.PI) * 9;
