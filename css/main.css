@@ -249,6 +249,10 @@ body.touch #panel-trigger {
   background: rgba(125, 249, 255, 0.15);
   box-shadow: 0 0 24px rgba(125, 249, 255, 0.4);
 }
+.splash-fly:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
 .boot-inner {
   text-align: center;
   font-family: 'Courier New', monospace;
