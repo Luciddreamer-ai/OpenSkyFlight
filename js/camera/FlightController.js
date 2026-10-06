@@ -119,8 +119,16 @@ export default class FlightController {
     }
 
     // Accumulate yaw/pitch as scalars (no gimbal lock)
+    const hadPitchInput = this._pendingPitch !== 0;
     this.yaw += this._pendingYaw;
     this.pitch += this._pendingPitch;
+    // Auto-level: when the pilot isn't actively pitching, gently ease the
+    // nose back to level so cruise doesn't slowly descend into terrain.
+    if (!hadPitchInput && dt > 0) {
+      const levelRate = 0.1; // rad/s — subtle, doesn't fight deliberate input
+      const dp = Math.min(Math.abs(this.pitch), levelRate * dt);
+      this.pitch -= Math.sign(this.pitch) * dp;
+    }
     this._pendingYaw = 0;
     this._pendingPitch = 0;
 
