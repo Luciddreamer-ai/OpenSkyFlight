@@ -170,7 +170,7 @@ async function initApp() {
     flightController.touchMove.y = 0;
     _prevPos.copy(flightController.position);
     takeoffT = -2; // armed — starts when the boot overlay dismisses (Sitka ready)
-    crashGraceT = 60; // no crash checks during load + 22s intro + margin
+    crashGraceT = 25; // no crash checks during load + 22s intro + small margin
     Logger.info('App', 'Takeoff intro armed: departing Sitka Airport');
   }
   const dbgParams = (() => {
@@ -531,10 +531,12 @@ async function initApp() {
         flightController.position.z + _crashFwd.z * CRASH_LOOKAHEAD_M);
       // Over water the DEM returns seafloor depth (e.g. -4586m), not sea level.
       // Trigger the splash at the visual water surface (~0m), not the seafloor.
-      const isWater = gndBelow <= WATER_LEVEL_M && gndAhead <= WATER_LEVEL_M;
-      const triggerAlt = isWater
-        ? WATER_LEVEL_M + CRASH_GROUND_PAD_M
-        : Math.max(gndBelow, gndAhead) + CRASH_GROUND_PAD_M;
+      // Use the visual surface: max(terrain, sea level) — if either sample is
+      // land, use the higher terrain; if both are water, use sea level.
+      const surfaceBelow = Math.max(gndBelow, WATER_LEVEL_M);
+      const surfaceAhead = Math.max(gndAhead, WATER_LEVEL_M);
+      const isWater = surfaceBelow <= WATER_LEVEL_M + 0.5 && surfaceAhead <= WATER_LEVEL_M + 0.5;
+      const triggerAlt = Math.max(surfaceBelow, surfaceAhead) + CRASH_GROUND_PAD_M;
       if (flightController.position.y < triggerAlt) {
         crashing = true;
         _impactVel.set(
