@@ -668,3 +668,71 @@ body.touch #touch-ui {
 #tc-buttons button:active {
   background: rgba(80, 140, 200, 0.6);
 }
+
+/* ── Touch throttle slider (left edge, touch devices only) ── */
+#throttle-slider {
+  display: none;
+  position: fixed;
+  left: max(10px, env(safe-area-inset-left));
+  top: 50%;
+  transform: translateY(-50%);
+  height: min(44vh, 360px);
+  width: 52px;
+  z-index: 26;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+body.touch #throttle-slider {
+  display: flex;
+}
+#throttle-track {
+  position: relative;
+  width: 14px;
+  flex: 1;
+  min-height: 120px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: rgba(0, 20, 10, 0.6);
+}
+#throttle-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  border-radius: 6px;
+  background: linear-gradient(to top, rgba(0, 255, 136, 0.25), rgba(0, 255, 136, 0.65));
+  pointer-events: none;
+}
+#throttle-knob {
+  position: absolute;
+  left: 50%;
+  bottom: 30%;
+  width: 40px;
+  height: 26px;
+  transform: translate(-50%, 50%);
+  border-radius: 6px;
+  border: 2px solid var(--color-primary);
+  background: rgba(0, 40, 20, 0.9);
+  box-shadow: 0 0 8px var(--color-shadow-panel);
+  pointer-events: none;
+}
+#throttle-readout,
+#throttle-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
+  pointer-events: none;
+}
+#throttle-label {
+  font-size: 10px;
+  color: var(--color-text);
+}
