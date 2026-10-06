@@ -23,7 +23,7 @@ import AtmosphericSky from './atmosphere/AtmosphericSky.js';
 import CloudLayer from './atmosphere/CloudLayer.js';
 import BenchmarkRunner from './benchmark/BenchmarkRunner.js';
 import BenchmarkComparator from './benchmark/BenchmarkComparator.js';
-import { initSplash } from './ui/SplashScreen.js';
+import { initSplash, getSelectedPlane } from './ui/SplashScreen.js';
 import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
@@ -32,21 +32,9 @@ import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
 async function initApp() {
-  // Show the hangar picker immediately — before any async init that might hang.
-  // The grid populates from the static PLANES registry. TAKE OFF is clickable
-  // right away; the world catches up in the background.
-  let _splashPlaneType = 'rafale';
-  let _takeoffClicked = false;
-  try {
-    initSplash((planeType) => {
-      _splashPlaneType = planeType;
-      _takeoffClicked = true;
-      // If the world is ready, load the plane now; otherwise initApp will pick it up
-      if (window.__osfTakeoff) window.__osfTakeoff();
-    });
-  } catch (e) {
-    // Splash failed — continue with default plane
-  }
+  // Hangar is now an in-game menu, not a blocking splash.
+  // The game loads directly with the saved/default plane.
+  // (Hangar setup happens after aircraftManager is created, below.)
 
   // --- Core scene ---
   // Guard against a hung GPU backend: surface a visible error instead of
@@ -205,14 +193,16 @@ async function initApp() {
   const _autopilotQuat = new THREE.Quaternion();
   const aircraftManager = new AircraftManager(scene);
   // Aircraft selection via splash screen hangar. The game world (terrain, etc.)
-  // initializes behind the splash; the plane loads when the user hits TAKE OFF.
+  // Aircraft selection via in-game hangar menu. Loads the saved/default plane
+  // immediately; the hangar overlay lets the player switch anytime.
   let selectedPlaneDef = null;
   let _planeLoaded = false;
-  async function loadSelectedPlane() {
-    if (_planeLoaded) return;
+  async function loadSelectedPlane(planeType) {
+    if (_planeLoaded && planeType === _currentPlaneType) return;
     _planeLoaded = true;
+    _currentPlaneType = planeType;
     try {
-      selectedPlaneDef = await aircraftManager.loadPlane(_splashPlaneType);
+      selectedPlaneDef = await aircraftManager.loadPlane(planeType);
       // Apply plane flight characteristics
       CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
       flightController.agility = selectedPlaneDef.agility || 1;
@@ -225,7 +215,27 @@ async function initApp() {
   // Otherwise, the splash's onFly already fired and _takeoffClicked is set —
   // expose loadSelectedPlane so the callback can trigger it.
   window.__osfTakeoff = loadSelectedPlane;
-  if (_takeoffClicked) loadSelectedPlane();
+  // Load the saved/default plane immediately — no splash gate.
+  // (Hangar menu setup below lets the player switch in-game.)
+  const _initialPlane = getSelectedPlane();
+  let _currentPlaneType = _initialPlane;
+  loadSelectedPlane(_initialPlane);
+
+  // Hangar menu: in-game overlay for switching planes. The splash-screen DOM
+  // is reused as a modal; a HANGAR button (in touch controls) toggles it.
+  try {
+    initSplash((planeType) => {
+      // "TAKE OFF" in the hangar = close menu and fly the selected plane
+      document.getElementById('splash-screen')?.classList.add('hidden');
+      loadSelectedPlane(planeType);
+    });
+  } catch (e) {
+    // Hangar failed — game still works with default plane
+  }
+  // Expose hangar toggle for the HANGAR button
+  window.__osfHangar = () => {
+    document.getElementById('splash-screen')?.classList.remove('hidden');
+  };
 
   // --- Systems ---
   const benchmarkRunner = new BenchmarkRunner();
