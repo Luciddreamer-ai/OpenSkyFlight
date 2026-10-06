@@ -143,6 +143,30 @@ async function initApp() {
   // so the LOC button / throttle / stick can be exercised without a touchscreen.
   // NOTE: sampleTerrainElevation does not exist in this codebase — the
   // verified ground-elevation helper is geoTerrainManager.getGroundElevation.
+
+  // --- Takeoff intro (Sitka) ---
+  // When starting at the default location (Sitka Airport, no ?lat/?lon override),
+  // open with a takeoff roll: spawn low near the airport facing west over the
+  // water, throttle up, rotate, and climb. Any stick/throttle input skips it.
+  const SITKA_LAT = 57.0472, SITKA_LON = -135.3619;
+  const isDefaultStart = Math.abs(CONFIG.lat - SITKA_LAT) < 1e-9 &&
+                         Math.abs(CONFIG.lon - SITKA_LON) < 1e-9;
+  let takeoffT = -1; // <0 = no intro; -2 = armed, waiting for tiles; >=0 = seconds into takeoff
+  let _introLastThrottle = 0;
+  if (isDefaultStart) {
+    const gnd0 = geoTerrainManager.getGroundElevation(0, 0);
+    flightController.position.set(0, gnd0 + 25, 0);
+    flightController.setOrientation(Math.PI / 2, 0); // yaw 90° = west, over water
+    flightController.throttle = 0;
+    flightController.yawRate = 0;
+    flightController.pitchRate = 0;
+    flightController.touchMove.x = 0;
+    flightController.touchMove.y = 0;
+    _prevPos.copy(flightController.position);
+    takeoffT = -2; // armed — starts when the boot overlay dismisses (Sitka ready)
+    crashGraceT = 60; // no crash checks during load + 22s intro + margin
+    Logger.info('App', 'Takeoff intro armed: departing Sitka Airport');
+  }
   const dbgParams = (() => {
     try { return new URLSearchParams(location.search); }
     catch { return new URLSearchParams(); }
@@ -355,7 +379,10 @@ async function initApp() {
   // --- Render loop ---
   let prevTime = performance.now();
   let _bankRoll = 0;
-  let _booted = false; // boot overlay dismissed after first rendered frame
+  let _booted = false; // boot overlay dismissed once terrain tiles are ready
+  let _bootWaitT = 0; // seconds spent waiting for tiles
+  const BOOT_TILE_TIMEOUT_S = 30; // give up waiting after this long
+  const BOOT_MIN_TILES = 8; // need at least this many visible tiles
   // Velocity-lookahead state: project the LOD focal point ahead of motion so
   // terrain tiles along the flight path subdivide/download before arrival.
   const _prevCamPos = new THREE.Vector3();
@@ -372,6 +399,33 @@ async function initApp() {
     const dt = Math.min((now - prevTime) / 1000, MAX_DELTA_TIME);
     const frameTimeMs = now - prevTime;
     prevTime = now;
+
+    // --- Takeoff intro: scripted throttle/pitch, interruptible ---
+    if (takeoffT >= 0) {
+      const stickActive = Math.abs(flightController.touchMove.x) > 0.05 ||
+                          Math.abs(flightController.touchMove.y) > 0.05;
+      const throttleTouched = Math.abs(flightController.throttle - _introLastThrottle) > 0.02;
+      if (stickActive || throttleTouched) {
+        takeoffT = -1; // player took over
+        Logger.info('App', 'Takeoff intro skipped by player input');
+      } else {
+        takeoffT += dt;
+        // Phase 1 (0-12s): throttle 0 -> 0.35 (takeoff roll, ~840 m/s max)
+        const thrPhase = Math.min(takeoffT / 12, 1);
+        flightController.throttle = 0.35 * thrPhase;
+        _introLastThrottle = flightController.throttle;
+        // Phase 2 (8-20s): pitch 0 -> 0.12 rad (rotate and climb out)
+        if (takeoffT > 8) {
+          const pitchPhase = Math.min((takeoffT - 8) / 12, 1);
+          flightController.setOrientation(flightController.yaw, 0.12 * pitchPhase);
+        }
+        // End after 22s — normal flight resumes
+        if (takeoffT > 22) {
+          takeoffT = -1;
+          Logger.info('App', 'Takeoff intro complete');
+        }
+      }
+    }
 
     // --- Input phase ---
     flightController.update(dt);
@@ -544,10 +598,25 @@ async function initApp() {
     gpuTimer.endFrame();
     if (timer) timer.end('render');
 
-    // Dismiss the boot overlay once the first frame is on screen
+    // Dismiss the boot overlay once Sitka's terrain is actually loaded —
+    // not just the first frame. The player should see a beautiful home base,
+    // not gray tiles popping in.
     if (!_booted) {
-      _booted = true;
-      document.getElementById('boot-overlay')?.classList.add('hidden');
+      _bootWaitT += dt;
+      const tileCount = geoTerrainManager.countVisibleTiles();
+      const statusEl = document.getElementById('boot-status');
+      if (statusEl && tileCount < BOOT_MIN_TILES) {
+        statusEl.textContent = `Loading Sitka… (${tileCount} terrain tiles)`;
+      }
+      if (tileCount >= BOOT_MIN_TILES || _bootWaitT > BOOT_TILE_TIMEOUT_S) {
+        _booted = true;
+        document.getElementById('boot-overlay')?.classList.add('hidden');
+        // Start the takeoff roll now that the player can see it
+        if (takeoffT === -2) {
+          takeoffT = 0;
+          Logger.info('App', 'Takeoff intro starting — Sitka is ready');
+        }
+      }
     }
 
     // --- Overlay phase ---
