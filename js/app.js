@@ -23,6 +23,7 @@ import AtmosphericSky from './atmosphere/AtmosphericSky.js';
 import CloudLayer from './atmosphere/CloudLayer.js';
 import BenchmarkRunner from './benchmark/BenchmarkRunner.js';
 import BenchmarkComparator from './benchmark/BenchmarkComparator.js';
+import { initSplash } from './ui/SplashScreen.js';
 import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
@@ -187,8 +188,19 @@ async function initApp() {
   const _autopilotEuler = new THREE.Euler(0, 0, 0, 'YXZ');
   const _autopilotQuat = new THREE.Quaternion();
   const aircraftManager = new AircraftManager(scene);
-  aircraftManager.load('assets/models/rafale/Rafale.gltf').catch((err) => {
-    Logger.warn('App', 'Failed to load Rafale model: ' + err.message);
+  // Aircraft selection via splash screen hangar. The game world (terrain, etc.)
+  // initializes behind the splash; the plane loads when the user hits TAKE OFF.
+  let selectedPlaneDef = null;
+  initSplash(async (planeType) => {
+    try {
+      selectedPlaneDef = await aircraftManager.loadPlane(planeType);
+      // Apply plane flight characteristics
+      CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
+      flightController.agility = selectedPlaneDef.agility || 1;
+      Logger.info('App', `Flying ${selectedPlaneDef.name}: speed ${CONFIG.cameraSpeed}, agility ${flightController.agility}`);
+    } catch (err) {
+      Logger.warn('App', 'Failed to load plane: ' + err.message);
+    }
   });
 
   // --- Systems ---
