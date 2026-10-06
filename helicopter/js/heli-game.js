@@ -226,7 +226,10 @@ function setupKeys() {
 // ---------- init ----------
 async function init() {
   try { await detectTileMode(); } catch { /* direct mode fallback */ }
-  renderer = await createRenderer();
+  renderer = await Promise.race([
+    createRenderer(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Renderer timed out (30s)')), 30000)),
+  ]);
   const s = createScene();
   scene = s.scene;
   camera = createCamera();
