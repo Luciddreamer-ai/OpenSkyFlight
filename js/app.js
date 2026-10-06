@@ -23,7 +23,6 @@ import AtmosphericSky from './atmosphere/AtmosphericSky.js';
 import CloudLayer from './atmosphere/CloudLayer.js';
 import BenchmarkRunner from './benchmark/BenchmarkRunner.js';
 import BenchmarkComparator from './benchmark/BenchmarkComparator.js';
-import { initSplash, getSelectedPlane } from './ui/SplashScreen.js';
 import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
@@ -193,49 +192,17 @@ async function initApp() {
   const _autopilotQuat = new THREE.Quaternion();
   const aircraftManager = new AircraftManager(scene);
   // Aircraft selection via splash screen hangar. The game world (terrain, etc.)
-  // Aircraft selection via in-game hangar menu. Loads the saved/default plane
-  // immediately; the hangar overlay lets the player switch anytime.
+  // Aircraft: load the default Rafale directly. (Fleet plugin coming later
+  // as a proper in-game menu — not woven into boot.)
   let selectedPlaneDef = null;
-  let _planeLoaded = false;
-  async function loadSelectedPlane(planeType) {
-    if (_planeLoaded && planeType === _currentPlaneType) return;
-    _planeLoaded = true;
-    _currentPlaneType = planeType;
-    try {
-      selectedPlaneDef = await aircraftManager.loadPlane(planeType);
-      // Apply plane flight characteristics
-      CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
-      flightController.agility = selectedPlaneDef.agility || 1;
-      Logger.info('App', `Flying ${selectedPlaneDef.name}: speed ${CONFIG.cameraSpeed}, agility ${flightController.agility}`);
-    } catch (err) {
-      Logger.warn('App', 'Failed to load plane: ' + err.message);
-    }
-  }
-  // If the user clicked TAKE OFF while we were initializing, load now.
-  // Otherwise, the splash's onFly already fired and _takeoffClicked is set —
-  // expose loadSelectedPlane so the callback can trigger it.
-  window.__osfTakeoff = loadSelectedPlane;
-  // Load the saved/default plane immediately — no splash gate.
-  // (Hangar menu setup below lets the player switch in-game.)
-  const _initialPlane = getSelectedPlane();
-  let _currentPlaneType = _initialPlane;
-  loadSelectedPlane(_initialPlane);
-
-  // Hangar menu: in-game overlay for switching planes. The splash-screen DOM
-  // is reused as a modal; a HANGAR button (in touch controls) toggles it.
   try {
-    initSplash((planeType) => {
-      // "TAKE OFF" in the hangar = close menu and fly the selected plane
-      document.getElementById('splash-screen')?.classList.add('hidden');
-      loadSelectedPlane(planeType);
-    });
-  } catch (e) {
-    // Hangar failed — game still works with default plane
+    selectedPlaneDef = await aircraftManager.loadPlane('rafale');
+    CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
+    flightController.agility = selectedPlaneDef.agility || 1;
+    Logger.info('App', `Flying ${selectedPlaneDef.name}`);
+  } catch (err) {
+    Logger.warn('App', 'Failed to load plane: ' + err.message);
   }
-  // Expose hangar toggle for the HANGAR button
-  window.__osfHangar = () => {
-    document.getElementById('splash-screen')?.classList.remove('hidden');
-  };
 
   // --- Systems ---
   const benchmarkRunner = new BenchmarkRunner();
