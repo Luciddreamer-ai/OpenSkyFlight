@@ -36,6 +36,8 @@ const WATER_QUIPS = [
   'Ditching complete. 3 out of 10 for style.',
   'The coast guard has been notified.',
   'Somewhere, a lifeguard just facepalmed.',
+  'Bellyflop! The judges give it a 2.',
+  'That entry needed more tuck.',
 ];
 
 const TYPE_LABELS = {
@@ -44,10 +46,16 @@ const TYPE_LABELS = {
   cartwheel: 'CARTWHEEL!',
   bump: 'GENTLE BUMP',
   splash: 'SPLASHDOWN!',
+  bellyflop: 'BELLYFLOP!',
+  ditch: 'DITCHED',
+  nosedive: 'NOSEDIVE!',
+  cliffstrike: 'CLIFF STRIKE!',
+  stalldrop: 'STALL DROP',
+  bounce: 'BOUNCED IT!',
 };
 
 // Camera shake amplitude (meters) per crash type; decays over CRASH_DURATION.
-const SHAKE_AMP = { fireball: 4.0, skid: 2.0, cartwheel: 2.0, bump: 0.8, splash: 1.2 };
+const SHAKE_AMP = { fireball: 4.0, skid: 2.0, cartwheel: 2.0, bump: 0.8, splash: 1.2, bellyflop: 2.5, ditch: 0.6, nosedive: 5.0, cliffstrike: 3.5, stalldrop: 1.8, bounce: 1.5 };
 
 export default class CrashFX {
   constructor(scene) {
@@ -309,7 +317,7 @@ export default class CrashFX {
   }
 
   showBanner() {
-    const quips = this.type === 'splash' ? WATER_QUIPS : QUIPS;
+    const quips = (this.type === 'splash' || this.type === 'bellyflop' || this.type === 'ditch') ? WATER_QUIPS : QUIPS;
     this._quipEl.textContent = quips[(Math.random() * quips.length) | 0];
     this._subEl.textContent = TYPE_LABELS[this.type] || '';
     this._banner.style.display = 'flex';
@@ -369,6 +377,57 @@ export default class CrashFX {
       this.spinRate = 0.25; // gentle nose-down settle into the water
       this.burst(p.x, p.y, p.z, 'splash', 60);
       this.burst(p.x, p.y, p.z, 'splash', 30);
+    } else if (type === 'bellyflop') {
+      // Fast flat water smack — huge spray, skip and tumble
+      this.vel.multiplyScalar(0.5);
+      this.vel.y = Math.abs(this.vel.y) * 0.3; // bounce up
+      this.spinAxis.set(1, 0, 0);
+      this.spinRate = 4;
+      this.burst(p.x, p.y, p.z, 'splash', 80);
+      this.burst(p.x, p.y, p.z, 'splash', 40);
+      this.burst(p.x, p.y, p.z, 'smoke', 12);
+    } else if (type === 'ditch') {
+      // Gentle controlled water landing — soft splash, settle
+      this.vel.multiplyScalar(0.1);
+      this.vel.y = 0;
+      this.spinRate = 0;
+      this.burst(p.x, p.y, p.z, 'splash', 25);
+    } else if (type === 'nosedive') {
+      // Straight down — massive explosion
+      this.vel.set(0, this.vel.y * 0.1, 0);
+      this.spinRate = 0;
+      this.burst(p.x, p.y, p.z, 'fire', 60);
+      this.burst(p.x, p.y, p.z, 'smoke', 35);
+      this.burst(p.x, p.y, p.z, 'spark', 40);
+      this.burst(p.x, p.y, p.z, 'dust', 30);
+      this._flash.style.display = 'block';
+      this._flash.style.opacity = '1.0';
+      this._flashOn = true;
+    } else if (type === 'cliffstrike') {
+      // Into a wall — explosion, debris falls
+      this.vel.multiplyScalar(0.1);
+      this.vel.y = -Math.abs(this.vel.y) * 0.5; // slide down
+      this.spinAxis.set(1, 0, 0);
+      this.spinRate = 3;
+      this.burst(p.x, p.y, p.z, 'fire', 35);
+      this.burst(p.x, p.y, p.z, 'smoke', 25);
+      this.burst(p.x, p.y, p.z, 'dust', 35);
+      this.burst(p.x, p.y, p.z, 'spark', 20);
+    } else if (type === 'stalldrop') {
+      // Fell out of sky — thud, minimal forward
+      this.vel.multiplyScalar(0.05);
+      this.spinAxis.set(0, 0, 1);
+      this.spinRate = 2;
+      this.burst(p.x, p.y, p.z, 'dust', 30);
+      this.burst(p.x, p.y, p.z, 'smoke', 15);
+    } else if (type === 'bounce') {
+      // Skipped off surface — bounce and keep sliding
+      this.vel.y = Math.abs(this.vel.y) * 0.6; // bounce up
+      this.vel.multiplyScalar(0.7); // keep most forward speed
+      this.spinAxis.set(1, 0, 0);
+      this.spinRate = 2.5;
+      this.burst(p.x, p.y, p.z, 'dust', 20);
+      this.burst(p.x, p.y, p.z, 'spark', 15);
     } else { // 'bump'
       this.vel.multiplyScalar(0.15);
       this.vel.y = 0;
