@@ -39,6 +39,7 @@ export default class TouchControls {
 
     this._buildUI();
     this._setupThrottle();
+    this._setupLocation();
 
     // Document-level so touches over the HUD overlay canvas also steer.
     // Touches that begin on real UI controls are left alone.
@@ -62,13 +63,14 @@ export default class TouchControls {
         <button type="button" data-key="v" aria-label="Toggle cockpit/chase view">VIEW</button>
         <button type="button" data-key="t" aria-label="Cycle texture mode">TEX</button>
         <button type="button" data-key="h" aria-label="Toggle HUD">HUD</button>
+        <button type="button" id="tc-loc" aria-label="Choose flight location">LOC</button>
       </div>`;
     document.body.appendChild(ui);
     this.ui = ui;
     this.stickBase = ui.querySelector('#tc-stick-base');
     this.stickKnob = ui.querySelector('#tc-stick-knob');
 
-    ui.querySelectorAll('#tc-buttons button').forEach((btn) => {
+    ui.querySelectorAll('#tc-buttons button[data-key]').forEach((btn) => {
       btn.addEventListener(
         'touchstart',
         (e) => {
@@ -84,6 +86,18 @@ export default class TouchControls {
         this._pressKey(btn.dataset.key);
       });
     });
+    // LOC opens the location picker dialog (wired in _setupLocation)
+    const locBtn = ui.querySelector('#tc-loc');
+    const openLoc = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._toggleLocationDialog(true);
+    };
+    locBtn.addEventListener('touchstart', openLoc, { passive: false });
+    locBtn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this._toggleLocationDialog(true);
+    });
   }
 
   /** Fire a synthetic keydown so InputManager bindings handle it. */
@@ -95,12 +109,13 @@ export default class TouchControls {
     const help = document.getElementById('help');
     if (help) {
       help.innerHTML =
-        'Left thumb : virtual stick — fly<br>' +
+        'Left thumb : virtual stick — X strafe, Y climb/descend<br>' +
         'Left edge slider : throttle — cruise speed (persists)<br>' +
         'Right thumb : drag to look around<br>' +
-        'VIEW : cockpit/chase | TEX : texture mode | HUD : instruments<br>' +
+        'VIEW : cockpit/chase | TEX : texture mode | HUD : instruments | LOC : location<br>' +
         'V : toggle view | H : toggle HUD | M : toggle map | I : info &amp; help<br>' +
-        'T : cycle texture mode | R : hi-res mode (static views) | X : debug tiles<br>' +
+        'T : cycle texture mode | E : climb | Q : descend | X : debug tiles<br>' +
+        'R : hi-res terrain (static views)<br>' +
         'N : record waypoints | Shift+N : clear plan | P : add waypoint<br>' +
         'L : load flight plan | G : autopilot on/off<br>' +
         'B : benchmark | Shift+B : store baseline';
@@ -113,7 +128,7 @@ export default class TouchControls {
     return (
       target instanceof Element &&
       !!target.closest(
-        '#control-panel, #flightplan-menu, #log-panel, #throttle-slider, input, select, textarea, a, button'
+        '#control-panel, #flightplan-menu, #log-panel, #throttle-slider, #location-dialog, input, select, textarea, a, button'
       )
     );
   }
@@ -183,6 +198,75 @@ export default class TouchControls {
       if (dragging) setFromClientY(e.clientY);
     });
     window.addEventListener('mouseup', endDrag);
+  }
+
+  /**
+   * Location picker: search any place via Nominatim or jump to a preset.
+   * Choosing a location reloads the app with ?lat= & ?lon= so the world
+   * re-initializes around the new coordinates.
+   */
+  _setupLocation() {
+    const dialog = document.getElementById('location-dialog');
+    if (!dialog) return;
+    const searchInput = dialog.querySelector('#loc-search');
+    const status = dialog.querySelector('#loc-status');
+
+    this._toggleLocationDialog = (show) => {
+      dialog.style.display = show ? 'flex' : 'none';
+      if (show) {
+        status.textContent = '';
+        setTimeout(() => searchInput.focus(), 60);
+      }
+    };
+
+    const flyTo = (lat, lon) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('lat', lat);
+      url.searchParams.set('lon', lon);
+      window.location.href = url.toString();
+    };
+
+    const search = async () => {
+      const q = searchInput.value.trim();
+      if (!q) {
+        status.textContent = 'Type a place name first.';
+        return;
+      }
+      status.textContent = 'Searching…';
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`,
+          { headers: { Accept: 'application/json' } }
+        );
+        const data = await res.json();
+        if (data && data.length > 0 && data[0].lat && data[0].lon) {
+          const short = String(data[0].display_name).split(',').slice(0, 2).join(',');
+          status.textContent = `Flying to ${short}…`;
+          flyTo(data[0].lat, data[0].lon);
+        } else {
+          status.textContent = 'No place found — try another name.';
+        }
+      } catch {
+        status.textContent = 'Search failed — check your connection.';
+      }
+    };
+
+    dialog.querySelector('#loc-go').addEventListener('click', search);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') search();
+    });
+    dialog.querySelector('#loc-close').addEventListener('click', () => this._toggleLocationDialog(false));
+    dialog.querySelectorAll('.loc-presets button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.random) {
+          const presets = [...dialog.querySelectorAll('.loc-presets button[data-lat]')];
+          const pick = presets[Math.floor(Math.random() * presets.length)];
+          flyTo(pick.dataset.lat, pick.dataset.lon);
+        } else {
+          flyTo(btn.dataset.lat, btn.dataset.lon);
+        }
+      });
+    });
   }
 
   _onTouchStart = (e) => {
