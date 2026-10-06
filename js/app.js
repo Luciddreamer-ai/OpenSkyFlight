@@ -85,6 +85,9 @@ async function initApp() {
   const CRASH_LOOKAHEAD_M = 100; // sample ground this far ahead of the nose
   const CRASH_GROUND_PAD_M = 4; // impact when the aircraft gets this close to terrain
   const CRASH_GRACE_S = 3; // no crash checks right after load/respawn
+  const _crashFwd = new THREE.Vector3();
+  const _prevPos = new THREE.Vector3(); // last frame's aircraft position (impact-speed tracking)
+  const _impactVel = new THREE.Vector3(); // aircraft velocity captured at impact
   const crashFX = new CrashFX(scene);
   let crashing = false;
   let crashGraceT = CRASH_GRACE_S; // countdown — no crash checks while > 0
@@ -93,11 +96,17 @@ async function initApp() {
   _prevPos.copy(flightController.position);
 
   // Pick the crash flavor from impact parameters:
+  //  splash    — into water (both ground samples at/below sea level)
   //  cartwheel — wing strike first (|roll| > ~0.35 rad; bank maxes at 0.5)
   //  fireball  — steep nose-down dive (pitch < -0.5 rad) at high sink rate
   //  skid      — shallow angle but fast across the ground
   //  bump      — slow and gentle (the funny minor one)
-  function classifyCrash(roll) {
+  // Water check: sea level reads ~0m from the DEM, so sample-at/below-1m on
+  // both the below and ahead samples = water, not terrain. Cheap and right
+  // for oceans/seas; high alpine lakes read as land (accepted limitation).
+  const WATER_LEVEL_M = 1.0;
+  function classifyCrash(roll, gndBelow, gndAhead) {
+    if (gndBelow <= WATER_LEVEL_M && gndAhead <= WATER_LEVEL_M) return 'splash';
     const rollAbs = Math.abs(roll || 0);
     const pitch = flightController.pitch; // rad; negative = nose-down
     if (rollAbs > 0.35) return 'cartwheel';
@@ -151,9 +160,6 @@ async function initApp() {
   const _axisZ = new THREE.Vector3(0, 0, 1);
   const _autopilotEuler = new THREE.Euler(0, 0, 0, 'YXZ');
   const _autopilotQuat = new THREE.Quaternion();
-  const _crashFwd = new THREE.Vector3();
-  const _prevPos = new THREE.Vector3(); // last frame's aircraft position (impact-speed tracking)
-  const _impactVel = new THREE.Vector3(); // aircraft velocity captured at impact
   const aircraftManager = new AircraftManager(scene);
   aircraftManager.load('assets/models/rafale/Rafale.gltf').catch((err) => {
     Logger.warn('App', 'Failed to load Rafale model: ' + err.message);
@@ -460,7 +466,7 @@ async function initApp() {
         flightController.enabled = false;
         flightController.yawRate = 0;
         flightController.pitchRate = 0;
-        const type = classifyCrash(aircraftState.roll);
+        const type = classifyCrash(aircraftState.roll, gndBelow, gndAhead);
         crashFX.startCrash(type, flightController,
           (x, z) => geoTerrainManager.getGroundElevation(x, z), _impactVel);
       }
