@@ -17,6 +17,7 @@ export default class FlightController {
     this.pitchRate = 0;
     this.keys = {};
     this.touchMove = { x: 0, y: 0 }; // virtual joystick: x = strafe, y = forward (-1..1)
+    this.throttle = 0.3; // cruise throttle 0..1 — persistent forward speed, plane flies on load
     this.locked = false;
     this.enabled = true;
 
@@ -131,44 +132,32 @@ export default class FlightController {
     this._forward.set(0, 0, -1).applyQuaternion(this.quaternion);
     this._right.set(1, 0, 0).applyQuaternion(this.quaternion);
 
-    const speed = CONFIG.cameraSpeed * dt;
     const fx = this._forward.x;
     const fy = this._forward.y;
     const fz = this._forward.z;
     const rx = this._right.x;
     const rz = this._right.z;
 
-    let mx = 0,
-      my = 0,
-      mz = 0;
+    // Throttle (cruise) + stick + keyboard → axis inputs.
+    // Throttle is persistent: the plane keeps flying without holding the stick.
+    // Keyboard W/S and A/D keep their old full-deflection behavior.
+    const clampAxis = (v) => Math.max(-1, Math.min(1, v));
+    let fwdInput = clampAxis((this.throttle || 0) + this.touchMove.y);
+    let strafeInput = clampAxis(this.touchMove.x);
+    if (this.keys['ArrowUp'] || this.keys['KeyW']) fwdInput = 1;
+    else if (this.keys['ArrowDown'] || this.keys['KeyS']) fwdInput = -1;
+    if (this.keys['ArrowRight'] || this.keys['KeyD']) strafeInput = 1;
+    else if (this.keys['ArrowLeft'] || this.keys['KeyA']) strafeInput = -1;
 
-    if (this.keys['ArrowUp'] || this.keys['KeyW']) {
-      mx += fx;
-      my += fy;
-      mz += fz;
-    }
-    if (this.keys['ArrowDown'] || this.keys['KeyS']) {
-      mx -= fx;
-      my -= fy;
-      mz -= fz;
-    }
-    if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-      mx -= rx;
-      mz -= rz;
-    }
-    if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-      mx += rx;
-      mz += rz;
-    }
-
-    // Touch virtual joystick (iPad / mobile) — same frame as keyboard
-    if (this.touchMove.x !== 0 || this.touchMove.y !== 0) {
-      mx += rx * this.touchMove.x + fx * this.touchMove.y;
-      my += fy * this.touchMove.y;
-      mz += rz * this.touchMove.x + fz * this.touchMove.y;
-    }
+    let mx = fx * fwdInput + rx * strafeInput;
+    let my = fy * fwdInput;
+    let mz = fz * fwdInput + rz * strafeInput;
 
     const len = Math.sqrt(mx * mx + my * my + mz * mz);
+    // Proportional speed: throttle 0.3 alone cruises at 30% of cameraSpeed;
+    // full stick deflection or W still gives full speed.
+    const speedScale = Math.min(1, len);
+    const speed = CONFIG.cameraSpeed * speedScale * dt;
     if (len > 0) {
       mx /= len;
       my /= len;
