@@ -57,6 +57,19 @@ async function initApp() {
   await detectTileMode();
   Logger.info('App', `Tile mode: ${getTileMode()}`);
   const geoTerrainManager = new GeoTerrainManager(scene, renderer);
+  // ?lat= & ?lon= let the location picker (or a shared link) drop the
+  // player anywhere on Earth; falls back to CONFIG defaults.
+  try {
+    const params = new URLSearchParams(location.search);
+    const plat = parseFloat(params.get('lat'));
+    const plon = parseFloat(params.get('lon'));
+    if (Number.isFinite(plat) && Number.isFinite(plon) &&
+        Math.abs(plat) <= 90 && Math.abs(plon) <= 180) {
+      CONFIG.lat = plat;
+      CONFIG.lon = plon;
+      Logger.info('App', `Start location from URL: ${plat}, ${plon}`);
+    }
+  } catch { /* non-browser context — keep CONFIG defaults */ }
   geoTerrainManager.init(CONFIG.lat, CONFIG.lon);
 
   // --- Controllers ---
