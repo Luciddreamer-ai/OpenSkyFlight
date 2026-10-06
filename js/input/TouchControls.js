@@ -38,6 +38,7 @@ export default class TouchControls {
     this.lastLook = { x: 0, y: 0 };
 
     this._buildUI();
+    this._setupThrottle();
 
     // Document-level so touches over the HUD overlay canvas also steer.
     // Touches that begin on real UI controls are left alone.
@@ -95,6 +96,7 @@ export default class TouchControls {
     if (help) {
       help.innerHTML =
         'Left thumb : virtual stick — fly<br>' +
+        'Left edge slider : throttle — cruise speed (persists)<br>' +
         'Right thumb : drag to look around<br>' +
         'VIEW : cockpit/chase | TEX : texture mode | HUD : instruments<br>' +
         'V : toggle view | H : toggle HUD | M : toggle map | I : info &amp; help<br>' +
@@ -111,9 +113,76 @@ export default class TouchControls {
     return (
       target instanceof Element &&
       !!target.closest(
-        '#control-panel, #flightplan-menu, #log-panel, input, select, textarea, a, button'
+        '#control-panel, #flightplan-menu, #log-panel, #throttle-slider, input, select, textarea, a, button'
       )
     );
+  }
+
+  /**
+   * Vertical cruise-throttle slider on the left screen edge (DOM lives in
+   * index.html). Dragging it sets a persistent forward speed on the flight
+   * controller; the plane keeps flying without holding the stick.
+   */
+  _setupThrottle() {
+    const root = document.getElementById('throttle-slider');
+    if (!root) return;
+    const track = root.querySelector('#throttle-track');
+    const fill = root.querySelector('#throttle-fill');
+    const knob = root.querySelector('#throttle-knob');
+    const readout = root.querySelector('#throttle-readout');
+
+    this._setThrottle = (t) => {
+      t = Math.max(0, Math.min(1, t));
+      this.fc.throttle = t;
+      const pct = `${t * 100}%`;
+      fill.style.height = pct;
+      knob.style.bottom = pct;
+      readout.textContent = `${Math.round(t * 100)}%`;
+    };
+    const setFromClientY = (clientY) => {
+      const rect = track.getBoundingClientRect();
+      if (rect.height <= 0) return;
+      this._setThrottle(1 - (clientY - rect.top) / rect.height);
+    };
+    // Start in sync with the flight controller's default cruise
+    this._setThrottle(this.fc.throttle || 0);
+
+    let dragging = false;
+    root.addEventListener(
+      'touchstart',
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragging = true;
+        setFromClientY(e.changedTouches[0].clientY);
+      },
+      { passive: false }
+    );
+    root.addEventListener(
+      'touchmove',
+      (e) => {
+        if (!dragging) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setFromClientY(e.changedTouches[0].clientY);
+      },
+      { passive: false }
+    );
+    const endDrag = () => {
+      dragging = false;
+    };
+    root.addEventListener('touchend', endDrag);
+    root.addEventListener('touchcancel', endDrag);
+    // Stylus/mouse fallback
+    root.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      dragging = true;
+      setFromClientY(e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (dragging) setFromClientY(e.clientY);
+    });
+    window.addEventListener('mouseup', endDrag);
   }
 
   _onTouchStart = (e) => {
