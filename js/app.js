@@ -110,13 +110,27 @@ async function initApp() {
   // for oceans/seas; high alpine lakes read as land (accepted limitation).
   const WATER_LEVEL_M = 1.0;
   function classifyCrash(roll, gndBelow, gndAhead) {
-    if (gndBelow <= WATER_LEVEL_M && gndAhead <= WATER_LEVEL_M) return 'splash';
     const rollAbs = Math.abs(roll || 0);
     const pitch = flightController.pitch; // rad; negative = nose-down
-    if (rollAbs > 0.35) return 'cartwheel';
-    if (pitch < -0.5 && _vertSpeed < -150) return 'fireball';
-    if (_horizSpeed > 300 && _vertSpeed > -150) return 'skid';
-    return 'bump';
+    const surfaceBelow = Math.max(gndBelow, WATER_LEVEL_M);
+    const surfaceAhead = Math.max(gndAhead, WATER_LEVEL_M);
+    const isWater = surfaceBelow <= WATER_LEVEL_M + 0.5 && surfaceAhead <= WATER_LEVEL_M + 0.5;
+    // Water impacts
+    if (isWater) {
+      if (_horizSpeed > 200 && Math.abs(pitch) < 0.3) return 'bellyflop'; // fast flat smack
+      if (_horizSpeed < 80 && _vertSpeed > -50) return 'ditch'; // gentle controlled landing
+      return 'splash'; // classic nose-down splash
+    }
+    // Terrain impacts
+    const terrainRise = surfaceAhead - surfaceBelow; // positive = cliff/wall ahead
+    if (pitch < -1.0 && _vertSpeed < -200) return 'nosedive'; // straight down
+    if (terrainRise > 80 && _horizSpeed > 150) return 'cliffstrike'; // flew into a wall
+    if (rollAbs > 0.35) return 'cartwheel'; // wing strike
+    if (_horizSpeed < 60 && _vertSpeed < -100) return 'stalldrop'; // fell out of the sky
+    if (Math.abs(pitch) < 0.12 && _horizSpeed > 250) return 'bounce'; // skipped off the surface
+    if (pitch < -0.5 && _vertSpeed < -150) return 'fireball'; // steep dive
+    if (_horizSpeed > 300 && _vertSpeed > -150) return 'skid'; // fast shallow
+    return 'bump'; // gentle
   }
 
   // FLY AGAIN: drop back in 1200m above the crash site, wings level, and
