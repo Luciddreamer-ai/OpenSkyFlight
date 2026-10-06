@@ -516,7 +516,13 @@ async function initApp() {
       const gndAhead = geoTerrainManager.getGroundElevation(
         flightController.position.x + _crashFwd.x * CRASH_LOOKAHEAD_M,
         flightController.position.z + _crashFwd.z * CRASH_LOOKAHEAD_M);
-      if (flightController.position.y < Math.max(gndBelow, gndAhead) + CRASH_GROUND_PAD_M) {
+      // Over water the DEM returns seafloor depth (e.g. -4586m), not sea level.
+      // Trigger the splash at the visual water surface (~0m), not the seafloor.
+      const isWater = gndBelow <= WATER_LEVEL_M && gndAhead <= WATER_LEVEL_M;
+      const triggerAlt = isWater
+        ? WATER_LEVEL_M + CRASH_GROUND_PAD_M
+        : Math.max(gndBelow, gndAhead) + CRASH_GROUND_PAD_M;
+      if (flightController.position.y < triggerAlt) {
         crashing = true;
         _impactVel.set(
           _crashFwd.x * _horizSpeed,
