@@ -23,6 +23,7 @@ export default class FlightController {
     this.throttle = 0.1; // cruise throttle 0..1 — persistent forward speed, plane flies on load
     this.locked = false;
     this.enabled = true;
+    this.agility = 1.0; // plane-specific handling multiplier (set by aircraft selection)
 
     this._pendingYaw = 0;
     this._pendingPitch = 0;
@@ -123,8 +124,8 @@ export default class FlightController {
 
     // Accumulate yaw/pitch as scalars (no gimbal lock)
     const hadPitchInput = this._pendingPitch !== 0;
-    this.yaw += this._pendingYaw;
-    this.pitch += this._pendingPitch;
+    this.yaw += this._pendingYaw * this.agility;
+    this.pitch += this._pendingPitch * this.agility;
     // Auto-level: when the pilot isn't actively pitching, gently ease the
     // nose back to level so cruise doesn't slowly descend into terrain.
     if (!hadPitchInput && dt > 0) {
