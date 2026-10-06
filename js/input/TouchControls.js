@@ -64,6 +64,7 @@ export default class TouchControls {
         <button type="button" data-key="t" aria-label="Cycle texture mode">TEX</button>
         <button type="button" data-key="h" aria-label="Toggle HUD">HUD</button>
         <button type="button" id="tc-loc" aria-label="Choose flight location">LOC</button>
+        <button type="button" id="tc-hangar" aria-label="Choose aircraft">HANGAR</button>
       </div>`;
     document.body.appendChild(ui);
     this.ui = ui;
@@ -97,6 +98,18 @@ export default class TouchControls {
     locBtn.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       this._toggleLocationDialog(true);
+    });
+    // HANGAR opens the aircraft picker overlay (wired via window.__osfHangar in app.js)
+    const hangarBtn = ui.querySelector('#tc-hangar');
+    const openHangar = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.__osfHangar) window.__osfHangar();
+    };
+    hangarBtn.addEventListener('touchstart', openHangar, { passive: false });
+    hangarBtn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      if (window.__osfHangar) window.__osfHangar();
     });
   }
 
