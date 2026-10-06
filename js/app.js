@@ -13,6 +13,7 @@ import InputManager from './input/InputManager.js';
 import TouchControls from './input/TouchControls.js';
 import GeoTerrainManager from './terrain/GeoTerrainManager.js';
 import FlightController from './camera/FlightController.js';
+import CrashFX from './fx/CrashFX.js';
 import ControlPanel from './ui/ControlPanel.js';
 import HUD from './ui/HUD.js';
 import Minimap from './ui/Minimap.js';
@@ -75,13 +76,83 @@ async function initApp() {
   // --- Controllers ---
   const flightController = new FlightController(camera, renderer.domElement);
   const chaseCameraController = new ChaseCameraController();
+
+  // --- Crash system ---
+  // Replaces the old 60m terrain floor: fly into the ground and the plane
+  // crashes with a physics-flavored animation (fireball / skid / cartwheel /
+  // bump) chosen from the impact parameters, instead of bouncing off thin air.
+  const crashFX = new CrashFX(scene);
+  let crashing = false;
+  let crashGraceT = CRASH_GRACE_S; // countdown — no crash checks while > 0
+  let _horizSpeed = 0; // m/s, horizontal speed at impact
+  let _vertSpeed = 0; // m/s, vertical speed at impact (negative = descending)
+  _prevPos.copy(flightController.position);
+
+  // Pick the crash flavor from impact parameters:
+  //  cartwheel — wing strike first (|roll| > ~0.6 rad)
+  //  fireball  — steep nose-down dive (pitch < -0.5 rad) at high sink rate
+  //  skid      — shallow angle but fast across the ground
+  //  bump      — slow and gentle (the funny minor one)
+  function classifyCrash(roll) {
+    const rollAbs = Math.abs(roll || 0);
+    const pitch = flightController.pitch; // rad; negative = nose-down
+    if (rollAbs > 0.6) return 'cartwheel';
+    if (pitch < -0.5 && _vertSpeed < -150) return 'fireball';
+    if (_horizSpeed > 300 && _vertSpeed > -150) return 'skid';
+    return 'bump';
+  }
+
+  // FLY AGAIN: drop back in 1200m above the crash site, wings level, and
+  // hand the controls back with a fresh grace period.
+  crashFX.setRespawnHandler(() => {
+    const cx = flightController.position.x;
+    const cz = flightController.position.z;
+    const gnd = geoTerrainManager.getGroundElevation(cx, cz);
+    flightController.position.set(cx, gnd + 1200, cz);
+    flightController.setOrientation(flightController.yaw, 0);
+    flightController.yawRate = 0;
+    flightController.pitchRate = 0;
+    flightController.throttle = 0.1;
+    flightController.touchMove.x = 0;
+    flightController.touchMove.y = 0;
+    flightController.enabled = true;
+    crashing = false;
+    crashGraceT = CRASH_GRACE_S;
+    _prevPos.copy(flightController.position);
+    _horizSpeed = 0;
+    _vertSpeed = 0;
+    chaseCameraController.reset();
+    crashFX.reset();
+  });
+
+  // Hidden debug hook (?debug=1) for automated playtesting only.
+  // Exposes internals on window.__osf and forces the touch UI on desktop
+  // so the LOC button / throttle / stick can be exercised without a touchscreen.
+  // NOTE: sampleTerrainElevation does not exist in this codebase — the
+  // verified ground-elevation helper is geoTerrainManager.getGroundElevation.
+  const dbgParams = (() => {
+    try { return new URLSearchParams(location.search); }
+    catch { return new URLSearchParams(); }
+  })();
+  if (dbgParams.has('debug')) {
+    window.__osf = {
+      flightController,
+      CONFIG,
+      geoTerrainManager,
+      groundAt: (x, z) => geoTerrainManager.getGroundElevation(x, z),
+    };
+    Logger.info('App', 'Debug mode: __osf handle exposed');
+  }
   const _qRoll = new THREE.Quaternion();
   const _axisZ = new THREE.Vector3(0, 0, 1);
   const _autopilotEuler = new THREE.Euler(0, 0, 0, 'YXZ');
   const _autopilotQuat = new THREE.Quaternion();
-  const _terrainFwd = new THREE.Vector3();
-  const TERRAIN_CLEARANCE_M = 60; // minimum AGL the terrain floor enforces
-  const TERRAIN_LOOKAHEAD_M = 600; // sample ground this far ahead of the nose
+  const _crashFwd = new THREE.Vector3();
+  const _prevPos = new THREE.Vector3(); // last frame's aircraft position (impact-speed tracking)
+  const _impactVel = new THREE.Vector3(); // aircraft velocity captured at impact
+  const CRASH_LOOKAHEAD_M = 100; // sample ground this far ahead of the nose
+  const CRASH_GROUND_PAD_M = 4; // impact when the aircraft gets this close to terrain
+  const CRASH_GRACE_S = 3; // no crash checks right after load/respawn
   const aircraftManager = new AircraftManager(scene);
   aircraftManager.load('assets/models/rafale/Rafale.gltf').catch((err) => {
     Logger.warn('App', 'Failed to load Rafale model: ' + err.message);
@@ -268,7 +339,8 @@ async function initApp() {
 
   // --- Touch controls (iPad / mobile) ---
   // Virtual joystick + drag-to-look. Desktop keyboard/mouse path is untouched.
-  if (TouchControls.isTouchDevice()) {
+  // ?debug=1 also forces the touch UI on desktop for automated playtesting.
+  if (TouchControls.isTouchDevice() || dbgParams.has('debug')) {
     new TouchControls(flightController);
     Logger.info('App', 'Touch controls enabled');
   }
@@ -353,22 +425,43 @@ async function initApp() {
       aircraftState.roll = _bankRoll;
     }
 
-    // --- Terrain clearance (manual flight only) ---
-    // Sample ground elevation below and ahead of the nose; hold the aircraft
-    // above a minimum clearance so unattended cruise can't fly into a mountainside.
+    // --- Crash detection & animation (manual flight only) ---
+    // The old 60m terrain floor is gone: sample the ground below and just
+    // ahead of the nose, and if the aircraft touches dirt, trigger a crash
+    // animation chosen from the impact parameters. Controls freeze while the
+    // wreck tumbles; FLY AGAIN respawns 1200m above the crash site.
     const manualFlight = aircraftState && !flightPlanRecorder.autopilotActive && !benchmarkRunner.isRunning();
-    if (manualFlight) {
-      _terrainFwd.set(0, 0, -1).applyQuaternion(flightController.quaternion);
+    if (dt > 0 && !crashing) {
+      const dx = flightController.position.x - _prevPos.x;
+      const dy = flightController.position.y - _prevPos.y;
+      const dz = flightController.position.z - _prevPos.z;
+      _horizSpeed = Math.hypot(dx, dz) / dt;
+      _vertSpeed = dy / dt;
+      _prevPos.copy(flightController.position);
+    }
+    if (crashGraceT > 0) crashGraceT -= dt;
+    if (crashing) {
+      crashFX.update(dt, flightController,
+        (x, z) => geoTerrainManager.getGroundElevation(x, z));
+    } else if (manualFlight && crashGraceT <= 0 && dt > 0) {
+      _crashFwd.set(0, 0, -1).applyQuaternion(flightController.quaternion);
       const gndBelow = geoTerrainManager.getGroundElevation(
         flightController.position.x, flightController.position.z);
       const gndAhead = geoTerrainManager.getGroundElevation(
-        flightController.position.x + _terrainFwd.x * TERRAIN_LOOKAHEAD_M,
-        flightController.position.z + _terrainFwd.z * TERRAIN_LOOKAHEAD_M);
-      const floorY = Math.max(gndBelow, gndAhead) + TERRAIN_CLEARANCE_M;
-      if (flightController.position.y < floorY) {
-        flightController.position.y = floorY;
-        // Climbing away: don't let the nose stay buried in the slope
-        if (flightController.pitch < 0.03) flightController.pitch = 0.03;
+        flightController.position.x + _crashFwd.x * CRASH_LOOKAHEAD_M,
+        flightController.position.z + _crashFwd.z * CRASH_LOOKAHEAD_M);
+      if (flightController.position.y < Math.max(gndBelow, gndAhead) + CRASH_GROUND_PAD_M) {
+        crashing = true;
+        _impactVel.set(
+          _crashFwd.x * _horizSpeed,
+          _vertSpeed,
+          _crashFwd.z * _horizSpeed);
+        flightController.enabled = false;
+        flightController.yawRate = 0;
+        flightController.pitchRate = 0;
+        const type = classifyCrash(aircraftState.roll);
+        crashFX.startCrash(type, flightController,
+          (x, z) => geoTerrainManager.getGroundElevation(x, z), _impactVel);
       }
     }
 
@@ -387,6 +480,10 @@ async function initApp() {
         chaseCameraController.update(aircraftState, camera, dt);
       }
     }
+
+    // Crash camera shake: decaying random offset while the wreck tumbles.
+    // Safe here — both camera modes rebuild camera position/quaternion above.
+    if (crashing) crashFX.applyShake(camera);
 
     // --- Environment phase ---
     cloudLayer.update(dt, camera.position, aircraftState ? aircraftState.pitch : 0);
