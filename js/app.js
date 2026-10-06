@@ -206,11 +206,16 @@ async function initApp() {
   const _autopilotQuat = new THREE.Quaternion();
   const aircraftManager = new AircraftManager(scene);
   // Aircraft selection via splash screen hangar. The game world (terrain, etc.)
-  // Aircraft: load the default Rafale directly. (Fleet plugin coming later
-  // as a proper in-game menu — not woven into boot.)
+  // Aircraft: load from ?plane= URL param, default Rafale. (B-17: ?plane=b17)
+  // Fleet plugin coming later as a proper in-game menu — not woven into boot.
   let selectedPlaneDef = null;
+  let _planeType = 'rafale';
   try {
-    selectedPlaneDef = await aircraftManager.loadPlane('rafale');
+    const _pp = new URLSearchParams(location.search).get('plane');
+    if (_pp && /^[a-z0-9]+$/.test(_pp)) _planeType = _pp;
+  } catch { /* non-browser */ }
+  try {
+    selectedPlaneDef = await aircraftManager.loadPlane(_planeType);
     CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
     flightController.agility = selectedPlaneDef.agility || 1;
     Logger.info('App', `Flying ${selectedPlaneDef.name}`);
@@ -357,6 +362,50 @@ async function initApp() {
   input.onKey('p', () => {
     if (flightPlanRecorder.isRecording()) flightPlanRecorder.addWaypoint(flightController);
   });
+
+  // --- Bombs (B-17) ---
+  // Simple arcade bombs: press B to drop, they fall with gravity and explode on impact.
+  // Only meaningful for the B-17, but works from any plane for fun.
+  const bombs = [];
+  const bombGeo = new THREE.SphereGeometry(0.4, 8, 6);
+  const bombMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.6 });
+  function dropBomb() {
+    if (bombs.length >= 10) return; // max 10 active
+    const bomb = new THREE.Mesh(bombGeo, bombMat);
+    bomb.position.copy(flightController.position);
+    bomb.position.y -= 2; // below the plane
+    // Inherit plane velocity (forward motion)
+    const vel = new THREE.Vector3(0, 0, -1).applyQuaternion(flightController.quaternion);
+    vel.multiplyScalar(_horizSpeed || 100);
+    vel.y = _vertSpeed || 0;
+    scene.add(bomb);
+    bombs.push({ mesh: bomb, vel });
+    Logger.info('App', 'Bomb away!');
+    showNotification('Bomb away!');
+  }
+  input.onKey('b', dropBomb);
+  // Update bombs in the animate loop (added to existing animation section)
+  const _bombUpdate = (dt) => {
+    for (let i = bombs.length - 1; i >= 0; i--) {
+      const b = bombs[i];
+      b.vel.y -= 9.8 * dt; // gravity
+      b.mesh.position.addScaledVector(b.vel, dt);
+      const gnd = geoTerrainManager.getGroundElevation(b.mesh.position.x, b.mesh.position.z);
+      const surface = Math.max(gnd, WATER_LEVEL_M);
+      if (b.mesh.position.y <= surface + 1) {
+        // Impact! Small explosion
+        crashFX.burst(b.mesh.position.x, surface + 2, b.mesh.position.z, 'fire', 20);
+        crashFX.burst(b.mesh.position.x, surface + 2, b.mesh.position.z, 'smoke', 15);
+        crashFX.burst(b.mesh.position.x, surface + 2, b.mesh.position.z, 'dust', 20);
+        scene.remove(b.mesh);
+        bombs.splice(i, 1);
+      } else if (b.mesh.position.y < -100) {
+        // Fell through (shouldn't happen) — clean up
+        scene.remove(b.mesh);
+        bombs.splice(i, 1);
+      }
+    }
+  };
 
   input.onKey('g', () => {
     if (flightPlanRecorder.autopilotActive) {
@@ -533,6 +582,7 @@ async function initApp() {
       _prevPos.copy(flightController.position);
     }
     if (crashGraceT > 0) crashGraceT -= dt;
+    _bombUpdate(dt); // update falling bombs
     if (crashing) {
       crashFX.update(dt, flightController,
         (x, z) => geoTerrainManager.getGroundElevation(x, z));
