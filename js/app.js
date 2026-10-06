@@ -31,7 +31,17 @@ import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
 async function initApp() {
   // --- Core scene ---
-  const renderer = await createRenderer();
+  // Guard against a hung GPU backend: surface a visible error instead of
+  // leaving the boot overlay on "Initializing…" forever.
+  const renderer = await Promise.race([
+    createRenderer(),
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Renderer init timed out after 30s — this browser did not provide a usable GPU context.')),
+        30000,
+      ),
+    ),
+  ]);
   const { scene, dirLight, ambientLight } = createScene();
   const camera = createCamera();
 
@@ -56,6 +66,9 @@ async function initApp() {
   const _axisZ = new THREE.Vector3(0, 0, 1);
   const _autopilotEuler = new THREE.Euler(0, 0, 0, 'YXZ');
   const _autopilotQuat = new THREE.Quaternion();
+  const _terrainFwd = new THREE.Vector3();
+  const TERRAIN_CLEARANCE_M = 60; // minimum AGL the terrain floor enforces
+  const TERRAIN_LOOKAHEAD_M = 600; // sample ground this far ahead of the nose
   const aircraftManager = new AircraftManager(scene);
   aircraftManager.load('assets/models/rafale/Rafale.gltf').catch((err) => {
     Logger.warn('App', 'Failed to load Rafale model: ' + err.message);
@@ -325,6 +338,25 @@ async function initApp() {
         aircraftState.yawRate * ROLL_SENSITIVITY));
       _bankRoll += (targetRoll - _bankRoll) * ROLL_DAMP_SPEED * dt;
       aircraftState.roll = _bankRoll;
+    }
+
+    // --- Terrain clearance (manual flight only) ---
+    // Sample ground elevation below and ahead of the nose; hold the aircraft
+    // above a minimum clearance so unattended cruise can't fly into a mountainside.
+    const manualFlight = aircraftState && !flightPlanRecorder.autopilotActive && !benchmarkRunner.isRunning();
+    if (manualFlight) {
+      _terrainFwd.set(0, 0, -1).applyQuaternion(flightController.quaternion);
+      const gndBelow = geoTerrainManager.getGroundElevation(
+        flightController.position.x, flightController.position.z);
+      const gndAhead = geoTerrainManager.getGroundElevation(
+        flightController.position.x + _terrainFwd.x * TERRAIN_LOOKAHEAD_M,
+        flightController.position.z + _terrainFwd.z * TERRAIN_LOOKAHEAD_M);
+      const floorY = Math.max(gndBelow, gndAhead) + TERRAIN_CLEARANCE_M;
+      if (flightController.position.y < floorY) {
+        flightController.position.y = floorY;
+        // Climbing away: don't let the nose stay buried in the slope
+        if (flightController.pitch < 0.03) flightController.pitch = 0.03;
+      }
     }
 
     // --- Camera phase ---
