@@ -12,7 +12,7 @@
  * @property {boolean} hiResMode              - Hi-res zoom 18 mode (default: false)
  *
  * Camera & flight:
- * @property {number}  cameraSpeed            - Flight speed in units/sec, range [1..4000] (default: 800)
+ * @property {number}  cameraSpeed            - Flight speed in units/sec, range [1..4000] (default: 2400)
  * @property {string}  cameraMode             - 'chase' | 'cockpit' (default: 'chase')
  * @property {number}  mouseSensitivity       - Mouse look sensitivity (default: 0.002)
  *
@@ -54,7 +54,7 @@ const CONFIG_VALIDATION = {
 
 /** @type {AppConfig} */
 const CONFIG = {
-  cameraSpeed: 800,
+  cameraSpeed: 2400,
   cameraMode: 'chase',
   mouseSensitivity: 0.002,
   maxPixelRatio: 2,
