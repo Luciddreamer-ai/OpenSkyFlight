@@ -81,6 +81,10 @@ async function initApp() {
   // Replaces the old 60m terrain floor: fly into the ground and the plane
   // crashes with a physics-flavored animation (fireball / skid / cartwheel /
   // bump) chosen from the impact parameters, instead of bouncing off thin air.
+  // (Constants declared up here: crashGraceT below reads CRASH_GRACE_S at init.)
+  const CRASH_LOOKAHEAD_M = 100; // sample ground this far ahead of the nose
+  const CRASH_GROUND_PAD_M = 4; // impact when the aircraft gets this close to terrain
+  const CRASH_GRACE_S = 3; // no crash checks right after load/respawn
   const crashFX = new CrashFX(scene);
   let crashing = false;
   let crashGraceT = CRASH_GRACE_S; // countdown — no crash checks while > 0
@@ -150,9 +154,6 @@ async function initApp() {
   const _crashFwd = new THREE.Vector3();
   const _prevPos = new THREE.Vector3(); // last frame's aircraft position (impact-speed tracking)
   const _impactVel = new THREE.Vector3(); // aircraft velocity captured at impact
-  const CRASH_LOOKAHEAD_M = 100; // sample ground this far ahead of the nose
-  const CRASH_GROUND_PAD_M = 4; // impact when the aircraft gets this close to terrain
-  const CRASH_GRACE_S = 3; // no crash checks right after load/respawn
   const aircraftManager = new AircraftManager(scene);
   aircraftManager.load('assets/models/rafale/Rafale.gltf').catch((err) => {
     Logger.warn('App', 'Failed to load Rafale model: ' + err.message);
