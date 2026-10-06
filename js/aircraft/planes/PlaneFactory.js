@@ -277,6 +277,45 @@ export const PLANES = {
       return g;
     }
   },
+
+  b17: {
+    name: 'B-17 Flying Fortress',
+    desc: 'WWII heavy bomber — slow, stable, drops bombs (B key)',
+    speed: 0.45,
+    agility: 0.35, // heavy and sluggish, as it should be
+    bomber: true,
+    build() {
+      const g = new THREE.Group();
+      // Long fuselage — olive drab
+      g.add(fuselage(11, 1.1, 0x4a4a2e));
+      // Big high wing
+      g.add(box(16, 0.3, 3.0, 0x4a4a2e, 0, 1.0, -1.0));
+      // Four engines with props
+      [-5.5, -2.0, 2.0, 5.5].forEach(x => {
+        const nac = cyl(0.6, 0.55, 3.5, 0x3a3a24, x, 0.8, -1.8);
+        nac.rotation.x = Math.PI / 2;
+        g.add(nac);
+        const p = prop(0x1a1a1a); p.scale.setScalar(1.6); p.position.set(x, 0.8, -3.7); g.add(p);
+      });
+      // Tail: big vertical fin + horizontal stabilizers
+      g.add(box(0.2, 3.0, 1.5, 0x4a4a2e, 0, 1.5, 5.2)); // fin
+      g.add(box(6.0, 0.2, 1.4, 0x4a4a2e, 0, 0.3, 5.0)); // stabilizers
+      // Nose: glass bombardier position
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), mat(0x87ceeb, { roughness: 0.1, metalness: 0.2 }));
+      nose.position.set(0, -0.2, -5.8); nose.scale.set(1, 0.8, 1.2); g.add(nose);
+      // Top turret
+      g.add(cyl(0.4, 0.5, 0.6, 0x3a3a24, 0, 1.3, -0.5));
+      // Belly ball turret
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), mat(0x87ceeb, { roughness: 0.1 }));
+      belly.position.set(0, -1.2, 0.5); g.add(belly);
+      // US star insignia (simplified white star on blue)
+      [-8.1, 8.1].forEach(x => {
+        g.add(box(0.05, 1.2, 1.2, 0xffffff, x, 1.0, -1.0));
+      });
+      const cp = cockpit(); cp.position.set(0, 0.8, -3.5); g.add(cp);
+      return g;
+    }
+  },
 };
 
 export function buildPlane(type) {
