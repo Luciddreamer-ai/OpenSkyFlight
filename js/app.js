@@ -32,6 +32,24 @@ import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
 async function initApp() {
+  // Show the hangar picker immediately — before any async init that might hang.
+  // The grid populates from the static PLANES registry. The TAKE OFF button
+  // stays disabled until the world is ready.
+  const flyBtn = document.getElementById('fly-button');
+  if (flyBtn) flyBtn.disabled = true;
+  let _splashPlaneType = 'rafale';
+  let _takeoffClicked = false;
+  try {
+    initSplash((planeType) => {
+      _splashPlaneType = planeType;
+      _takeoffClicked = true;
+      // If the world is ready, load the plane now; otherwise initApp will pick it up
+      if (window.__osfTakeoff) window.__osfTakeoff();
+    });
+  } catch (e) {
+    // Splash failed — continue with default plane
+  }
+
   // --- Core scene ---
   // Guard against a hung GPU backend: surface a visible error instead of
   // leaving the boot overlay on "Initializing…" forever.
@@ -191,9 +209,12 @@ async function initApp() {
   // Aircraft selection via splash screen hangar. The game world (terrain, etc.)
   // initializes behind the splash; the plane loads when the user hits TAKE OFF.
   let selectedPlaneDef = null;
-  initSplash(async (planeType) => {
+  let _planeLoaded = false;
+  async function loadSelectedPlane() {
+    if (_planeLoaded) return;
+    _planeLoaded = true;
     try {
-      selectedPlaneDef = await aircraftManager.loadPlane(planeType);
+      selectedPlaneDef = await aircraftManager.loadPlane(_splashPlaneType);
       // Apply plane flight characteristics
       CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
       flightController.agility = selectedPlaneDef.agility || 1;
@@ -201,7 +222,13 @@ async function initApp() {
     } catch (err) {
       Logger.warn('App', 'Failed to load plane: ' + err.message);
     }
-  });
+  }
+  // If the user clicked TAKE OFF while we were initializing, load now.
+  // Otherwise, the splash's onFly already fired and _takeoffClicked is set —
+  // expose loadSelectedPlane so the callback can trigger it.
+  window.__osfTakeoff = loadSelectedPlane;
+  if (_takeoffClicked) loadSelectedPlane();
+  if (flyBtn) flyBtn.disabled = false;
 
   // --- Systems ---
   const benchmarkRunner = new BenchmarkRunner();
