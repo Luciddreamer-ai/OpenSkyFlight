@@ -51,6 +51,8 @@ export function initSplash(onFly) {
 
   flyBtn.addEventListener('click', () => {
     splash.classList.add('hidden');
+    // Show the boot/loading overlay while the world prepares
+    document.getElementById('boot-overlay')?.classList.remove('hidden');
     Logger.info('Splash', `Taking off in: ${PLANES[selected].name}`);
     onFly(selected);
   });
