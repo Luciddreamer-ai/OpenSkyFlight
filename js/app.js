@@ -89,14 +89,14 @@ async function initApp() {
   _prevPos.copy(flightController.position);
 
   // Pick the crash flavor from impact parameters:
-  //  cartwheel — wing strike first (|roll| > ~0.6 rad)
+  //  cartwheel — wing strike first (|roll| > ~0.35 rad; bank maxes at 0.5)
   //  fireball  — steep nose-down dive (pitch < -0.5 rad) at high sink rate
   //  skid      — shallow angle but fast across the ground
   //  bump      — slow and gentle (the funny minor one)
   function classifyCrash(roll) {
     const rollAbs = Math.abs(roll || 0);
     const pitch = flightController.pitch; // rad; negative = nose-down
-    if (rollAbs > 0.6) return 'cartwheel';
+    if (rollAbs > 0.35) return 'cartwheel';
     if (pitch < -0.5 && _vertSpeed < -150) return 'fireball';
     if (_horizSpeed > 300 && _vertSpeed > -150) return 'skid';
     return 'bump';
