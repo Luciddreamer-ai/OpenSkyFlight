@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import Logger from '../utils/Logger.js';
+import { buildPlane, PLANES } from './planes/PlaneFactory.js';
 import {
   AIRCRAFT_TARGET_LENGTH,
   VISUAL_ROLL_FACTOR,
@@ -15,6 +16,8 @@ export default class AircraftManager {
     this.scene = scene;
     this.mesh = null;
     this.ready = false;
+    this.planeType = 'rafale';
+    this.planeDef = PLANES.rafale;
 
     this._visualRoll = 0;
     this._visualPitch = 0;
@@ -24,6 +27,31 @@ export default class AircraftManager {
     this._qRoll = new THREE.Quaternion();
     this._axisZ = new THREE.Vector3(0, 0, 1);
     this._axisX = new THREE.Vector3(1, 0, 0);
+  }
+
+  // Load a plane by type: 'rafale' uses the GLTF, others use procedural models
+  async loadPlane(type = 'rafale') {
+    this.planeType = type;
+    // Clear previous
+    if (this.group) {
+      this.scene.remove(this.group);
+      this.group = null;
+      this.mesh = null;
+    }
+    if (type === 'rafale') {
+      await this.load('assets/models/rafale/Rafale.gltf');
+    } else {
+      const { group, def } = buildPlane(type);
+      this.planeDef = def;
+      this.group = new THREE.Group();
+      this.group.add(group);
+      this.mesh = group;
+      // Procedural models point nose along -Z already; match Rafale orientation
+      this.scene.add(this.group);
+      this.ready = true;
+      Logger.info('Aircraft', `Procedural plane loaded: ${def.name}`);
+    }
+    return this.planeDef;
   }
 
   async load(url) {
@@ -103,6 +131,11 @@ export default class AircraftManager {
     if (!this.ready) return;
 
     const { position, roll, yawRate, pitchRate, quaternion } = state;
+
+    // Spin helicopter rotor
+    if (this.mesh && this.mesh.userData.rotor) {
+      this.mesh.userData.rotor.rotation.y += dt * 18;
+    }
 
     // Smooth visual roll and pitch (cosmetic tilt on the mesh)
     const targetRoll = Math.max(-VISUAL_ROLL_MAX, Math.min(VISUAL_ROLL_MAX, yawRate * VISUAL_ROLL_FACTOR));
