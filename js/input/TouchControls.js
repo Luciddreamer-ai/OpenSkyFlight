@@ -154,6 +154,15 @@ export default class TouchControls {
       knob.style.bottom = pct;
       readout.textContent = `${Math.round(t * 100)}%`;
     };
+    // Public: refresh the slider visuals from the flight controller's current
+    // throttle (used by the scripted takeoff intro, which sets fc.throttle directly)
+    this.syncThrottleUI = () => {
+      const t = Math.max(0, Math.min(1, this.fc.throttle || 0));
+      const pct = `${t * 100}%`;
+      fill.style.height = pct;
+      knob.style.bottom = pct;
+      readout.textContent = `${Math.round(t * 100)}%`;
+    };
     const setFromClientY = (clientY) => {
       const rect = track.getBoundingClientRect();
       if (rect.height <= 0) return;
