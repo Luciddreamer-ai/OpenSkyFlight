@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- Link preview, matching what the shell emits for the other games. A
+       shared URL should not preview as a bare page title. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Jayhawk Rescue — Sitka Skies" />
+  <meta property="og:description" content="Hover and save them" />
+  <meta property="og:url" content="./" />
+  <meta name="description" content="Hover and save them" />
   <script>
     // Global error catcher — display JS errors on the boot screen for remote diagnosis
     window.addEventListener('error', (e) => {

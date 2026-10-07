@@ -48,27 +48,76 @@ export const GAMES = [
   {
     id: 'ring-run',
     name: 'Ring Run',
-    tagline: 'Race the clock',
-    blurb: 'Glowing rings on a real route. Thread them all, then beat your own best time.',
+    tagline: 'Thread the course against the clock',
+    blurb:
+      'Eight rings over Sitka Sound, one clock. Score is the time you have left, so the reward is a tight line rather than a safe one.',
     icon: '◎',
     href: 'ring-run/',
     accent: '#ff6bd6',
-    skills: ['Time trial', 'Best score', 'Replays'],
-    control: 'Stick = bank · Drag = pitch',
-    comingSoon: true,
+    skills: ['Time trial', 'Waypoints', 'Real terrain'],
+    control: 'Stick = bank · Drag = pitch · Throttle = speed',
   },
   {
-    id: 'wildlife',
+    id: 'slalom',
+    name: 'Slalom',
+    tagline: 'Low and fast, always turning',
+    blurb:
+      'Gates sit low and alternate hard left-right. There is no line that stays straight, so hesitating costs you the whole course.',
+    icon: '⇄',
+    href: 'slalom/',
+    accent: '#ffd93d',
+    skills: ['Precision', 'Speed', 'Real terrain'],
+    control: 'Stick = bank · Drag = pitch · Throttle = speed',
+  },
+  {
+    id: 'cargo-drop',
+    name: 'Cargo Drop',
+    tagline: 'Collect it, then let it go',
+    blurb:
+      'Pick up the load, fly to the zone, and release at the right height. The score is decided by the drop, not the flying.',
+    icon: '📦',
+    href: 'cargo-drop/',
+    accent: '#7df9ff',
+    skills: ['Two-phase', 'Ballistics', 'Judgement'],
+    control: 'Stick = bank · Full forward stick = release',
+  },
+  {
+    id: 'glide',
+    name: 'Glide',
+    tagline: 'Engine out',
+    blurb:
+      'Every metre of altitude is a metre of range. Throttle is not a speed control, it is a spend — and there is no engine to get you home.',
+    icon: '🪂',
+    href: 'glide/',
+    accent: '#9ee37d',
+    skills: ['Energy', 'Endurance', 'No engine'],
+    control: 'Stick = bank · Throttle = spend altitude',
+  },
+  {
+    id: 'island-hop',
+    name: 'Island Hop',
+    tagline: 'A tour, with nothing at stake',
+    blurb:
+      'Six real places around Sitka Sound, in a loop, at whatever pace you like. No clock, no score to beat, nowhere to fail.',
+    icon: '🏝',
+    href: 'island-hop/',
+    accent: '#5db8ff',
+    skills: ['Explore', 'No fail', 'Scenic'],
+    control: 'Stick = bank · Drag = pitch · Throttle = speed',
+  },
+  {
+    id: 'wildlife-watch',
     name: 'Wildlife Watch',
     tagline: "Look, don't touch",
-    blurb: 'Find and identify wildlife over real coastline. No timers, no failing.',
+    blurb:
+      'Find what lives around the sound and tap it to log the species. Nothing can be failed and the clock does not exist.',
     icon: '🦅',
-    href: 'wildlife/',
-    accent: '#9ee37d',
-    skills: ['Explore', 'Calm', 'Real places'],
-    control: 'Stick = bank · Throttle = speed',
-    comingSoon: true,
+    href: 'wildlife-watch/',
+    accent: '#c58cff',
+    skills: ['Spotting', 'Calm', 'No fail'],
+    control: 'Stick = bank · Tap a marker to identify',
   },
+  // --- placeholders, shown locked so the menu is honest about scope ---
 ];
 
 export const FREE_FLY = {
