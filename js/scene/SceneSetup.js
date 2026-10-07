@@ -3,6 +3,7 @@ import { CONFIG } from '../utils/config.js';
 import Logger from '../utils/Logger.js';
 import { CLEAR_COLOR, AMBIENT_INTENSITY, DIR_LIGHT_INTENSITY, DIR_LIGHT_POSITION } from '../constants/rendering.js';
 import { DEFAULT_FOV, DEFAULT_NEAR, DEFAULT_FAR, REALWORLD_START_ALTITUDE } from '../constants/camera.js';
+import { probeCapabilities, applyBudget, TIER } from '../rendering/CapabilityProbe.js';
 
 export async function createRenderer() {
   // iPad/Safari safety: WebGPU can be missing or unstable there. Try WebGPU
@@ -18,25 +19,47 @@ export async function createRenderer() {
     /* non-browser context — default to WebGPU attempt */
   }
 
+  // --- Hardware capability probe (runs BEFORE renderer construction) -------
+  // `antialias` can only be set at construction, so the tier has to be known
+  // first. This is what makes one build right on an iPad, on a discrete desktop
+  // GPU, and on hardware we have never seen: budgets come from measured
+  // capability, not from a list of device names.
+  const caps = await probeCapabilities();
+  applyBudget(caps.tier, caps.budget);
+  Logger.info('Renderer', `Capability probe → ${caps.tier}: ${caps.reasons.join(' | ')}`);
+  if (caps.tier === TIER.POTATO) {
+    // Be loud: the floor tier means either a software rasteriser or a very weak
+    // GPU, and the visual result will be noticeably simpler. Worth a log line
+    // so a report from a user can be diagnosed instantly.
+    Logger.warn(
+      'Renderer',
+      'Lowest graphics tier active — reduced resolution, fewer terrain tiles, no antialiasing. ' +
+        'Force a better tier with ?quality=balanced or ?quality=performance.',
+    );
+  }
+
   let renderer;
   if (!forceWebGL) {
     try {
       renderer = new THREE.WebGPURenderer({
-        antialias: true,
+        antialias: caps.budget.antialias,
         powerPreference: 'high-performance',
         trackTimestamp: true,
       });
       await renderer.init();
-      Logger.info('Renderer', 'WebGPU backend');
+      Logger.info('Renderer', `WebGPU backend (tier ${caps.tier})`);
     } catch (err) {
       Logger.warn('Renderer', 'WebGPU init failed, falling back to WebGL: ' + err.message);
       forceWebGL = true;
     }
   }
   if (forceWebGL) {
-    renderer = new THREE.WebGPURenderer({ forceWebGL: true, antialias: true });
+    renderer = new THREE.WebGPURenderer({
+      forceWebGL: true,
+      antialias: caps.budget.antialias,
+    });
     await renderer.init();
-    Logger.info('Renderer', 'WebGL backend (TSL fallback)');
+    Logger.info('Renderer', `WebGL backend (TSL fallback, tier ${caps.tier})`);
   }
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.maxPixelRatio));
@@ -52,6 +75,13 @@ export async function createRenderer() {
   attachContextLossHandlers(renderer);
 
   document.getElementById('canvas-container').appendChild(renderer.domElement);
+  // Consumers read the tier from the renderer so they do not have to re-probe.
+  renderer.capabilityTier = caps.tier;
+  renderer.capabilityBudget = caps.budget;
+  // Published so the control panel can tell the user what was detected. Kept
+  // deliberately small — this is a diagnostic surface, not a settings API.
+  window.__osfCapabilityTier = caps.tier;
+  window.__osfCapabilityReasons = caps.reasons;
   return renderer;
 }
 

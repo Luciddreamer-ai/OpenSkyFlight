@@ -43,6 +43,13 @@ export default class GeoTerrainManager {
   constructor(scene, renderer) {
     this.scene = scene;
     this.renderer = renderer;
+    // Capability tier measured once at boot by CapabilityProbe and attached to
+    // the renderer. Terrain cost is dominated by tile count and LOD, so the
+    // tier has to reach here or the probe would only be half-applied.
+    const budget = renderer?.capabilityBudget || null;
+    this._tier = renderer?.capabilityTier || 'balanced';
+    this._lodThreshold = budget?.lodThreshold ?? 1.2;
+    this._maxTotalTiles = budget?.maxTotalTiles ?? CONFIG.maxTotalTiles;
     this.tileMap = null;
     /** @deprecated Alias for backwards compat — use tileMap */
     this.mapView = null;
@@ -120,8 +127,11 @@ export default class GeoTerrainManager {
     // Z-up → Y-up (matches Three.js convention)
     this.tileMap.rotateX(-Math.PI / 2);
 
-    // LOD tuning
-    this.tileMap.LODThreshold = 1.2;
+    // LOD tuning — threshold comes from the measured capability tier.
+    // Lower = subdivide sooner = more tiles = better close-up detail but more
+    // GPU and bandwidth cost. The potato tier keeps it low and lean; the
+    // performance tier pushes it up and can afford the detail.
+    this.tileMap.LODThreshold = this._lodThreshold;
 
     // Center the map so that (lat, lon) is at world origin
     this._centerMercator = latLonToMercator(lat, lon);
@@ -212,6 +222,33 @@ export default class GeoTerrainManager {
       if (child.isMesh && child.visible && child !== this.tileMap) count++;
     });
     return count;
+  }
+
+  /**
+   * Resident tile pressure for the current tier, or null when unknown.
+   *
+   * `CONFIG.maxTotalTiles` existed but nothing ever read it, so the "budget"
+   * was decorative. This exposes the real number so the adaptive-quality
+   * layer can shed resolution when terrain is the actual bottleneck, which on
+   * mobile is usually the case.
+   */
+  getTilePressure() {
+    if (!this.tileMap || typeof this.tileMap.getTileCount !== 'function') return null;
+    try {
+      const t = this.tileMap.getTileCount();
+      return {
+        total: t.total,
+        visible: t.visible,
+        inFrustum: t.inFrustum,
+        maxLevel: t.maxLevel,
+        downloading: t.downloading,
+        budget: this._maxTotalTiles,
+        // >1 means we are carrying more terrain than this tier budgeted for.
+        overBudget: t.total > this._maxTotalTiles,
+      };
+    } catch {
+      return null;
+    }
   }
 
   _disposeTileMap(target) {

@@ -151,6 +151,16 @@
           <input type="number" id="lon" step="0.001" />
         </div>
         <div class="ctrl-group">
+          <label>GRAPHICS</label>
+          <select id="qualityPreset">
+            <option value="auto">Auto (recommended)</option>
+            <option value="potato">Lowest / battery</option>
+            <option value="balanced">Balanced</option>
+            <option value="performance">High</option>
+          </select>
+          <span class="ctrl-hint" id="qualityHint"></span>
+        </div>
+        <div class="ctrl-group">
           <label>TEXTURE</label>
           <select id="textureMode">
             <option value="satellite">Satellite</option>

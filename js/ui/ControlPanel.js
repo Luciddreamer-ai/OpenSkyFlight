@@ -11,12 +11,72 @@ export default class ControlPanel {
 
     this._setupHoverBehavior();
     this._setupRealworldControls();
+    this._setupQualityPreset();
     this._setupSpeedSlider();
     this._setupAtmosphere();
 
     this._bindCheckbox('showLogs', 'showLogs');
 
     this._setupLogLevel();
+  }
+
+  /**
+   * Graphics quality: AUTO by default.
+   *
+   * The auto path is the capability probe (see CapabilityProbe) — it already
+   * picks a sensible budget for iPad, discrete desktop, and unknown hardware.
+   * This control exists for the cases a probe cannot know about: a user who
+   * wants battery life over frame rate, or a device the probe classified
+   * optimistically. It is deliberately an override of the probe, not a
+   * replacement for it.
+   */
+  _setupQualityPreset() {
+    const sel = document.getElementById('qualityPreset');
+    const hint = document.getElementById('qualityHint');
+    if (!sel) return;
+
+    // Reflect whatever the URL already asked for.
+    try {
+      const forced = new URLSearchParams(location.search).get('quality');
+      if (forced) sel.value = forced;
+    } catch {
+      /* non-browser */
+    }
+
+    const describe = () => {
+      if (!hint) return;
+      const v = sel.value;
+      if (v === 'auto') {
+        const tier = window.__osfCapabilityTier;
+        hint.textContent = tier
+          ? `Detected: ${tier}. Resolution adapts to frame rate automatically.`
+          : 'Detecting hardware…';
+      } else {
+        hint.textContent = 'Applied on next load.';
+      }
+    };
+
+    sel.addEventListener('change', () => {
+      const v = sel.value;
+      try {
+        const url = new URL(location.href);
+        if (v === 'auto') url.searchParams.delete('quality');
+        else url.searchParams.set('quality', v);
+        // Two knobs change at boot only (antialias + tile LOD), so a reload is
+        // the honest way to apply a preset. Say so instead of silently doing
+        // half of it.
+        if (v !== 'auto') {
+          window.location.href = url.toString();
+          return;
+        }
+        history.replaceState(null, '', url.toString());
+      } catch {
+        /* non-browser */
+      }
+      describe();
+    });
+
+    describe();
   }
 
   _bindCheckbox(elementId, configKey) {
