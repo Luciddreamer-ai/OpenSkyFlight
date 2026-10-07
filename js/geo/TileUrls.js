@@ -12,10 +12,18 @@
 //   - Terrarium elevation:     s3.amazonaws.com/elevation-tiles-prod
 //   - ESRI World Imagery:      server.arcgisonline.com
 
+// ROOT-RELATIVE, not document-relative.
+//
+// These paths are resolved by the browser against the CURRENT PAGE URL. From
+// `/` they worked by accident. From `/games/bush-pilot/` a document-relative
+// `tiles/...` resolves to `/games/bush-pilot/tiles/...`, which is a 404 — so
+// every game page silently fell back to direct upstream fetches and the local
+// caching proxy could never serve a game. A leading slash fixes it at any
+// depth, and is a no-op for the root page.
 const PROXY_TEMPLATES = {
-  terrarium: 'tiles/terrarium/{z}/{x}/{y}.png',
-  osm: 'tiles/osm/{z}/{x}/{y}.png',
-  satellite: 'tiles/satellite/{z}/{x}/{y}.png',
+  terrarium: '/tiles/terrarium/{z}/{x}/{y}.png',
+  osm: '/tiles/osm/{z}/{x}/{y}.png',
+  satellite: '/tiles/satellite/{z}/{x}/{y}.png',
 };
 
 const DIRECT_TEMPLATES = {
@@ -63,7 +71,7 @@ export async function detectTileMode() {
   try {
     // Terrarium zoom-0 tile exists upstream, so a working proxy answers 200.
     // Any non-OK response (e.g. GitHub Pages 404) means no proxy is present.
-    const res = await fetch('tiles/terrarium/0/0/0.png', { method: 'HEAD', cache: 'no-store' });
+    const res = await fetch('/tiles/terrarium/0/0/0.png', { method: 'HEAD', cache: 'no-store' });
     mode = res.ok ? 'proxy' : 'direct';
   } catch {
     mode = 'direct';
