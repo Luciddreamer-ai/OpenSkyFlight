@@ -74,7 +74,7 @@ runGame({
     // slow and best near the best-glide speed, which gives a real rhythm to
     // the throttle: push when low, ease off when high.
     const glideEfficiency = 1 - Math.abs(flight.speed - 78) / 150;
-    const sink = 1.2 + throttle * 14 - Math.max(0, glideEfficiency) * 5.5;
+    const sink = 1.2 + throttle * 14 - Math.max(0, glideEfficiency) * 0.9;
     flight.position.y -= sink * dt;
 
     ctx.plane.position.copy(flight.position);
