@@ -28,7 +28,7 @@
 // version CONSISTENCY is a mechanical fact and that is what this asserts.
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, dirname } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 let failures = 0;
@@ -52,39 +52,85 @@ function htmlFiles(dir, out = []) {
 const pages = htmlFiles(ROOT);
 if (!pages.length) fail('no HTML pages found — the glob is wrong, not the repo');
 
-/** Pull the value of a bare specifier out of an importmap block. */
-function importmapPin(src, spec) {
-  const m = src.match(new RegExp(`"${spec.replace(/[/\\^$*+?.()|[\]{}]/g, '\\$&')}":\\s*"([^"]+)"`));
-  return m ? m[1] : null;
-}
-
+// EVERY specifier, not a hand-picked list.
+//
+// An earlier version of this file checked only `three` and `three/webgpu`, and
+// reported the repo as consistent while two game pages still pointed
+// `three/addons/` and `stats.js` at a /cdn/ path that does not exist. Checking
+// a chosen subset is the same mistake as checking a chosen subset of tests: it
+// produces a green badge over an unchecked claim. So the specifier list is
+// derived from the pages themselves, and an unresolvable local path is a
+// hard failure in its own right.
+const ROOT_REL = /^\/(?![/])/; // "/foo" but not "//host" (protocol-relative)
+const DOC_REL = /^\.{1,2}\//; // "./vendor/..." or "../../vendor/..."
 const pins = new Map(); // spec -> Map<page, value>
 for (const page of pages) {
   const src = readFileSync(page, 'utf8');
   if (!src.includes('importmap')) continue;
   const rel = relative(ROOT, page);
-  for (const spec of ['three', 'three/webgpu']) {
-    const v = importmapPin(src, spec);
-    if (!v) continue;
+  for (const [spec, v] of importmapEntries(src)) {
     if (!pins.has(spec)) pins.set(spec, new Map());
     pins.get(spec).set(rel, v);
   }
+}
+
+/** Every "spec": "value" pair inside the page's importmap. */
+function importmapEntries(src) {
+  const block = src.match(/<script[^>]*type=["']importmap["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (!block) return [];
+  let obj;
+  try {
+    obj = JSON.parse(block[1]);
+  } catch {
+    return [];
+  }
+  return Object.entries(obj?.imports ?? {});
 }
 
 if (!pins.size) {
   fail('no importmap pins found — expected a "three" entry in at least one page');
 } else {
   for (const [spec, byPage] of pins) {
-    const values = new Set(byPage.values());
-    if (values.size === 1) {
-      const [v] = values;
-      const m = v.match(/three@([\w.]+)/);
-      ok(`"${spec}" pinned to three@${m ? m[1] : '?'} across ${byPage.size} page(s)`);
-    } else {
+    // Split by kind. A document-relative path is CORRECTLY different between
+    // index.html and games/<x>/index.html -- they sit at different depths -- so
+    // demanding they match would be demanding a bug. The rule is: every
+    // document-relative value must resolve to a real file *from its own page*,
+    // and every absolute or URL value must be byte-identical everywhere.
+    const docRel = new Map([...byPage].filter(([, v]) => DOC_REL.test(v)));
+    const absolute = new Map([...byPage].filter(([, v]) => !DOC_REL.test(v)));
+
+    for (const [page, v] of docRel) {
+      const target = resolve(dirname(join(ROOT, page)), v);
+      if (existsSync(target)) ok(`"${spec}" in ${page} -> ${v} (resolves)`);
+      else fail(`"${spec}" in ${page} -> ${v} DOES NOT RESOLVE on disk`);
+    }
+    if (docRel.size === byPage.size) continue;
+
+    const values = new Set(absolute.values());
+    if (values.size > 1) {
       fail(
-        `"${spec}" is pinned to ${values.size} DIFFERENT versions: ` +
-          [...byPage.entries()].map(([p, v]) => `${p} -> ${v}`).join(' | '),
+        `"${spec}" is pinned to ${values.size} DIFFERENT values: ` +
+          [...absolute.entries()].map(([p, v]) => `${p} -> ${v}`).join(' | '),
       );
+      continue;
+    }
+    const [value] = values;
+    const shown = value.length > 58 ? value.slice(0, 55) + '...' : value;
+
+    // A root-relative path means a file in THIS repo. If it is not on disk the
+    // page 404s at runtime and renders a blank canvas behind a loading screen.
+    // This is the check that would have caught the /cdn/ bug.
+    if (ROOT_REL.test(value)) {
+      const onDisk = existsSync(join(ROOT, value));
+      if (onDisk) ok(`"${spec}" -> ${shown} (exists)`);
+      else fail(`"${spec}" -> ${shown} IS NOT IN THE REPO — this 404s at runtime`);
+      continue;
+    }
+    if (/^https?:\/\/cdn\.jsdelivr\.net\/npm\/three@/.test(value)) {
+      const m = value.match(/three@([\w.]+)/);
+      ok(`"${spec}" -> three@${m ? m[1] : '?'} across ${byPage.size} page(s)`);
+    } else {
+      ok(`"${spec}" -> ${shown} across ${byPage.size} page(s)`);
     }
   }
 }

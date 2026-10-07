@@ -8,8 +8,13 @@
   --accent: #7df9ff;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body {
-  margin: 0; padding: 0; height: 100%;
+html { height: 100%; }
+body {
+  /* min-height, not height: the launcher centres its content vertically, and
+     a fixed height plus centring is how you get the top of a long list pushed
+     out of reach on a short window. min-height lets the page simply grow. */
+  min-height: 100%;
+  display: flex; flex-direction: column;
   background: radial-gradient(120% 90% at 50% 0%, #0b1a2e 0%, var(--bg) 60%);
   color: var(--text);
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -36,7 +41,13 @@ html, body {
 }
 #grid-wrap {
   padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
-  max-width: 1180px; margin: 0 auto;
+  max-width: 1180px;
+  /* `margin: auto` on a column flex item centres the block in whatever space
+     the topbar leaves over, both axes. Unlike `justify-content: center` it
+     degrades to 0 when the content is taller than the window, so the first
+     card is never pushed above the fold on a landscape phone. */
+  margin: auto;
+  width: 100%;
 }
 #featured { margin-bottom: 18px; }
 #grid {

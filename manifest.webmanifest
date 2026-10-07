@@ -1,0 +1,37 @@
+{
+  "name": "Sitka Skies — OpenSkyFlight",
+  "short_name": "Sitka Skies",
+  "description": "A browser flight simulator over real-world terrain, home-based in Sitka, Alaska. Fly anywhere on Earth, or play a mini-game.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "categories": ["games", "education", "entertainment"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    { "src": "icons/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mini-games",
+      "short_name": "Games",
+      "url": "./games/",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mont Blanc",
+      "short_name": "Mont Blanc",
+      "url": "./?lat=45.8326&lon=6.8652",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

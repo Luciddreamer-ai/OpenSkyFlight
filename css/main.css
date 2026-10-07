@@ -135,9 +135,17 @@ canvas {
   position: fixed;
   top: calc(10px + env(safe-area-inset-top));
   right: calc(14px + env(safe-area-inset-right));
-  z-index: 21; /* above the HUD (9) */
-  display: block;
-  padding: 9px 16px;
+  /* Above the panel trigger (22). Their hit areas overlap in the top-right
+     corner now that the trigger has a 44px target, and this button sits there. */
+  z-index: 23;
+  /* Measured 40px tall against the 44pt touch-target minimum. A padding value
+     would have to be re-derived for every font and platform because the content
+     box height is font-dependent; min-height states the requirement directly
+     and cannot drift. The padding is kept for the case where the label wraps. */
+  min-height: 44px;
+  padding: 11px 16px;
+  display: inline-flex;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 2.5px;
@@ -147,7 +155,9 @@ canvas {
   border: 1px solid var(--color-primary);
   border-radius: 10px;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 #games-button:active,
 #games-button:hover {
@@ -168,6 +178,13 @@ canvas {
   right: 0;
   width: 20px;
   height: 100%;
+  /* The visible strip is 20px, which is well under the 44pt touch target that
+     Apple and Google both specify and roughly a quarter of what a thumb can
+     hit reliably. The hit area is widened to 44px with a transparent
+     pseudo-element so the control looks unchanged but is actually tappable.
+     z-index 22 keeps this above the minimap (20). The games button is raised
+     to 23 below so the two do not fight over the same pixels. */
+  --trigger-hit: 44px;
   /* Above the minimap (--z-minimap) and the open panel (--z-panel): the strip is
      the ONLY way to reach place search, coordinates, texture mode and
      atmosphere on touch, so it must never be covered. Previously the minimap
@@ -188,26 +205,27 @@ canvas {
   color: inherit;
   appearance: none;
   -webkit-appearance: none;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(0, 255, 136, 0.06) 40%,
-    rgba(0, 255, 136, 0.14)
-  );
+  background: linear-gradient(to right, transparent, rgba(0, 255, 136, 0.06) 40%, rgba(0, 255, 136, 0.14));
   border-left: 1px solid rgba(0, 255, 136, 0.35);
   /* Only the visible handle is interactive; the rest of the strip is a
      hover target on desktop but must not swallow taps meant for the HUD. */
   -webkit-tap-highlight-color: transparent;
   transition: background 0.2s ease;
 }
+/* Transparent, non-interactive-safe hit area. pointer-events stay on the
+   parent so the strip itself keeps its hover/active affordance. */
+#panel-trigger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--trigger-hit);
+  height: 100%;
+  background: transparent;
+}
 #panel-trigger:hover,
 #panel-trigger:focus-visible {
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(0, 255, 136, 0.12) 40%,
-    rgba(0, 255, 136, 0.24)
-  );
+  background: linear-gradient(to right, transparent, rgba(0, 255, 136, 0.12) 40%, rgba(0, 255, 136, 0.24));
 }
 
 /* The visible affordance: a grip tab with a chevron, centered in the strip so
@@ -284,7 +302,9 @@ body.touch #panel-trigger::after {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+  transition:
+    opacity 0.6s ease,
+    visibility 0s linear 0.6s;
 }
 /* Splash screen: aircraft hangar picker */
 #splash-screen {
@@ -305,7 +325,9 @@ body.touch #panel-trigger::after {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+  transition:
+    opacity 0.5s ease,
+    visibility 0s linear 0.5s;
 }
 .splash-inner {
   text-align: center;
@@ -326,7 +348,9 @@ body.touch #panel-trigger::after {
   color: #9fb3c8;
   margin-bottom: 28px;
 }
-.splash-section { margin-bottom: 24px; }
+.splash-section {
+  margin-bottom: 24px;
+}
 .splash-label {
   font-size: 12px;
   letter-spacing: 3px;
@@ -346,7 +370,9 @@ body.touch #panel-trigger::after {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.plane-card:hover { background: rgba(125, 249, 255, 0.12); }
+.plane-card:hover {
+  background: rgba(125, 249, 255, 0.12);
+}
 .plane-card.selected {
   border-color: #7df9ff;
   background: rgba(125, 249, 255, 0.18);
@@ -414,8 +440,13 @@ body.touch #panel-trigger::after {
   word-break: break-word;
 }
 @keyframes boot-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 /* ── MFD Control Panel ── */
@@ -715,6 +746,18 @@ body.touch #panel-trigger::after {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+/* These were 21x20, which is unusable with a thumb — smaller than a fingernail.
+   On a coarse pointer (any touch screen) they get a full 44x44 target. The
+   box grows outward from the same corner so the minimap itself does not move.
+   A mouse can hit 21px comfortably, so desktop keeps the compact form. */
+@media (pointer: coarse) {
+  .minimap-zoom-btns button {
+    min-width: 44px;
+    min-height: 44px;
+    line-height: 42px;
+    font-size: 16px;
+  }
+}
 #minimap {
   display: block;
   width: 256px;
@@ -894,7 +937,8 @@ body.touch #touch-ui {
   background: rgba(80, 140, 200, 0.6);
 }
 
-/* ── Touch throttle slider (left edge, touch devices only) ── */#throttle-slider {
+/* ── Touch throttle slider (left edge, touch devices only) ── */
+#throttle-slider {
   display: none;
   position: fixed;
   left: max(10px, env(safe-area-inset-left));

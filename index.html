@@ -7,10 +7,24 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="OpenSkyFlight" />
-  <meta name="theme-color" content="#000000" />
-  <title>OpenSkyFlight — 3D Flight Simulator</title>
+  <meta name="apple-mobile-web-app-title" content="Sitka Skies" />
+  <meta name="application-name" content="Sitka Skies" />
+  <!-- theme-color drives the Android status bar and the iOS title bar in
+       standalone mode. It has to match the CSS background, otherwise the
+       launch shows a black flash before the canvas paints. -->
+  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="A browser flight simulator over real-world terrain, home-based in Sitka, Alaska." />
+
+  <!-- Installability. Without a manifest the site opens in a browser tab with
+       no icon, no splash and no standalone mode; with one, iPad and desktop
+       both offer Add to Home Screen / Install. -->
+  <link rel="manifest" href="manifest.webmanifest" />
+
+  <title>Sitka Skies — OpenSkyFlight</title>
   <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="css/main.css" />
   <script type="importmap">
   {

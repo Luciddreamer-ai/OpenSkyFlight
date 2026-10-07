@@ -7,6 +7,7 @@ import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
 import { detectTileMode } from '../../../js/geo/TileUrls.js';
 import { CONFIG } from '../../../js/utils/config.js';
 import { attachDiagnostics, tickDiagnostics } from '../../../js/diagnostics/attach.js';
+import AtmosphericSky from '../../../js/atmosphere/AtmosphericSky.js';
 
 const SITKA_LAT = 57.0472,
   SITKA_LON = -135.3619;
@@ -341,6 +342,11 @@ async function init() {
   scene = s.scene;
   camera = createCamera();
   camera.position.set(0, 120, 60);
+
+  // Same reason as the other games: without a sky the horizon does not exist
+  // and the terrain floats in a black void. This file predates GameRuntime and
+  // is standalone, so it instantiates the sky itself.
+  new AtmosphericSky(scene, s.dirLight, s.ambientLight);
 
   // Same diagnostics as the sim and the other games. This file predates
   // GameRuntime and is deliberately standalone, so it calls the shared helper

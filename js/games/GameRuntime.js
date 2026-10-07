@@ -19,6 +19,7 @@ import GeoTerrainManager from '../terrain/GeoTerrainManager.js';
 import { detectTileMode } from '../geo/TileUrls.js';
 import Logger from '../utils/Logger.js';
 import { attachDiagnostics, tickDiagnostics } from '../diagnostics/attach.js';
+import AtmosphericSky from '../atmosphere/AtmosphericSky.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -276,6 +277,16 @@ export async function bootWorld({ lat, lon, onProgress } = {}) {
   const camera = createCamera();
   camera.far = 400000;
   camera.updateProjectionMatrix();
+
+  // The sky, which the free-flight sim has always had.
+  //
+  // createScene() sets no scene.background, so without this the renderer clears
+  // to opaque black and every game flew under a black void with the terrain
+  // floating in it. It looked like a lighting bug and read as "unfinished" --
+  // the horizon simply stopped existing. AtmosphericSky also drives dirLight
+  // and ambientLight from the sun position, so adding it here gives the games
+  // the same light as the sim rather than an arbitrary default.
+  new AtmosphericSky(scene, dirLight, ambientLight);
 
   const terrain = new GeoTerrainManager(scene, renderer);
   terrain.init(lat, lon);
