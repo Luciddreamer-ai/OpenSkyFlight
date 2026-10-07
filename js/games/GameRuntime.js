@@ -18,6 +18,7 @@ import { createRenderer, createScene, createCamera } from '../scene/SceneSetup.j
 import GeoTerrainManager from '../terrain/GeoTerrainManager.js';
 import { detectTileMode } from '../geo/TileUrls.js';
 import Logger from '../utils/Logger.js';
+import { attachDiagnostics, tickDiagnostics } from '../diagnostics/attach.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -282,9 +283,34 @@ export async function bootWorld({ lat, lon, onProgress } = {}) {
   const input = new GameInput(renderer.domElement);
   const flight = new SimpleFlight();
 
+  // Same diagnostics as the sim, so a bug report from a game carries the same
+  // evidence as one from free flight. A player who loses a run in Bush Pilot is
+  // exactly the player we need a frame trace from.
+  const { telemetry, watchdog } = attachDiagnostics({
+    renderer,
+    readState: () => {
+      const p = flight.position;
+      return p ? { x: p.x, y: p.y, z: p.z } : null;
+    },
+  });
+
   say('Loading terrain…');
-  return { renderer, scene, camera, terrain, input, flight, dirLight, ambientLight };
+  return {
+    renderer,
+    scene,
+    camera,
+    terrain,
+    input,
+    flight,
+    dirLight,
+    ambientLight,
+    telemetry,
+    watchdog,
+  };
 }
+
+/** Feed one frame of telemetry. Call once per frame from a game's loop. */
+export const tickTelemetry = tickDiagnostics;
 
 /** Chase camera that reads better in a game than the sim's default. */
 export function chaseCamera(camera, flight, dt, { distance = 34, height = 11 } = {}) {

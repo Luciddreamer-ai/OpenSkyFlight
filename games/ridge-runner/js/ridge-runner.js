@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import {
   bootWorld,
+  tickTelemetry,
   chaseCamera,
   centerMsg,
   hideMsg,
@@ -45,7 +46,7 @@ const $ = (id) => document.getElementById(id);
 
 async function main() {
   const world = await bootWorld({ lat: LAT, lon: LON, altitude: 1400 });
-  const { renderer, scene, camera, terrain, input, flight } = world;
+  const { renderer, scene, camera, terrain, input, flight, telemetry } = world;
 
   input.attachTouch($('stick-zone'), $('throttle-zone'));
 
@@ -121,6 +122,7 @@ async function main() {
 
   function frame(now) {
     requestAnimationFrame(frame);
+    tickTelemetry(telemetry, now);
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (G.paused) return;

@@ -6,6 +6,7 @@ import GeoTerrainManager from '../../../js/terrain/GeoTerrainManager.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
 import { detectTileMode } from '../../../js/geo/TileUrls.js';
 import { CONFIG } from '../../../js/utils/config.js';
+import { attachDiagnostics, tickDiagnostics } from '../../../js/diagnostics/attach.js';
 
 const SITKA_LAT = 57.0472,
   SITKA_LON = -135.3619;
@@ -341,6 +342,17 @@ async function init() {
   camera = createCamera();
   camera.position.set(0, 120, 60);
 
+  // Same diagnostics as the sim and the other games. This file predates
+  // GameRuntime and is deliberately standalone, so it calls the shared helper
+  // directly rather than being refactored for the privilege.
+  attachDiagnostics({
+    renderer,
+    readState: () => {
+      const p = G.pos;
+      return p ? { x: p.x, y: p.y, z: p.z } : null;
+    },
+  });
+
   terrain = new GeoTerrainManager(scene, renderer);
   CONFIG.lat = SITKA_LAT;
   CONFIG.lon = SITKA_LON;
@@ -378,6 +390,7 @@ async function init() {
 let lastT = 0;
 function loop(t) {
   requestAnimationFrame(loop);
+  tickDiagnostics(window.__osfTelemetry, t);
   const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
   lastT = t;
 

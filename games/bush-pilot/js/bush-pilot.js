@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import {
   bootWorld,
+  tickTelemetry,
   centerMsg,
   hideMsg,
   setHud,
@@ -100,7 +101,7 @@ async function primeScoutTiles(terrain) {
 }
 
 async function main() {
-  const { renderer, scene, camera, terrain, input, flight } = await bootWorld({
+  const { renderer, scene, camera, terrain, input, flight, telemetry } = await bootWorld({
     lat: LAT,
     lon: LON,
     altitude: 1500,
@@ -222,6 +223,7 @@ async function main() {
 
   function frame(now) {
     requestAnimationFrame(frame);
+    tickTelemetry(telemetry, now);
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (G.paused || G.landed) return;

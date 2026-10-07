@@ -24,6 +24,7 @@ import { showNotification } from './ui/Notification.js';
 import AtmosphericSky from './atmosphere/AtmosphericSky.js';
 import CloudLayer from './atmosphere/CloudLayer.js';
 import BenchmarkRunner from './benchmark/BenchmarkRunner.js';
+import { attachDiagnostics, tickDiagnostics } from './diagnostics/attach.js';
 import BenchmarkComparator from './benchmark/BenchmarkComparator.js';
 import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
@@ -52,6 +53,18 @@ async function initApp() {
   ]);
   const { scene, dirLight, ambientLight } = createScene();
   const camera = createCamera();
+
+  // --- Diagnostics ---
+  // The capability tier and the frame times are the two things this project
+  // cannot currently know. The overlay is a dynamic import behind the D key, so
+  // nobody pays for a panel they never open.
+  const { telemetry } = attachDiagnostics({
+    renderer,
+    readState: () =>
+      camera.position && Number.isFinite(camera.position.y)
+        ? { camY: camera.position.y, camX: camera.position.x, camZ: camera.position.z }
+        : null,
+  });
 
   // --- Atmosphere ---
   // Side-effect: registers itself with scene, dirLight, and ambientLight
@@ -484,6 +497,9 @@ async function initApp() {
     stats.begin();
 
     const now = performance.now();
+    // Recorded before any simulation work so the sample covers the whole
+    // frame. Fed to the overlay too, but only if it is actually open.
+    tickDiagnostics(telemetry, now);
     const dt = Math.min((now - prevTime) / 1000, MAX_DELTA_TIME);
     const frameTimeMs = now - prevTime;
     prevTime = now;
