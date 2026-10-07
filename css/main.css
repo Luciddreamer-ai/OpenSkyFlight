@@ -134,13 +134,99 @@ canvas {
   right: 0;
   width: 20px;
   height: 100%;
-  z-index: var(--z-trigger);
+  /* Above the minimap (--z-minimap) and the open panel (--z-panel): the strip is
+     the ONLY way to reach place search, coordinates, texture mode and
+     atmosphere on touch, so it must never be covered. Previously the minimap
+     (z-index 20) sat on top of this strip (19) and ate taps in the bottom
+     corner — exactly where a thumb naturally lands on an iPad.
+     SUGGESTIONS/03-panel-drawer-fix.md */
+  z-index: 22;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* It is a real <button> now (keyboard + VoiceOver reachable), so drop the
+     UA button chrome that would otherwise draw a border/background over the
+     handle. */
+  padding: 0;
+  border: none;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 255, 136, 0.06) 40%,
+    rgba(0, 255, 136, 0.14)
+  );
+  border-left: 1px solid rgba(0, 255, 136, 0.35);
+  /* Only the visible handle is interactive; the rest of the strip is a
+     hover target on desktop but must not swallow taps meant for the HUD. */
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease;
+}
+#panel-trigger:hover,
+#panel-trigger:focus-visible {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 255, 136, 0.12) 40%,
+    rgba(0, 255, 136, 0.24)
+  );
 }
 
-/* Touch: keep the trigger tappable above the open panel */
+/* The visible affordance: a grip tab with a chevron, centered in the strip so
+   it is never under the minimap. Replaces the old invisible 20px strip that
+   playtesters read as "stuck closed". */
+#panel-trigger::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 84px;
+  border-radius: 3px 0 0 3px;
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-primary);
+  border-right: none;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.25);
+}
+/* chevron */
+#panel-trigger::after {
+  content: '\2039'; /* ‹ — points at the panel it opens */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateX(2px);
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
+  pointer-events: none;
+}
+/* Panel open: flip the chevron so it reads as "close".
+   (A `#control-panel.visible ~ #panel-trigger` selector cannot work here —
+   the trigger is the PRECEDING sibling in index.html, and `~` only matches
+   following siblings. ControlPanel.js toggles body.panel-open instead.) */
+body.panel-open #panel-trigger::after {
+  content: '\203A'; /* › */
+  transform: translate(-50%, -50%) translateX(-2px);
+}
+
+/* Touch: wider strip so a fingertip can hit it reliably. */
 body.touch #panel-trigger {
-  width: 28px;
-  z-index: 21;
+  width: 30px;
+  z-index: 22;
+}
+body.touch #panel-trigger::before {
+  width: 20px;
+  height: 120px;
+}
+body.touch #panel-trigger::after {
+  font-size: 16px;
 }
 
 /* ── Boot overlay (loading + fatal-error screen) ── */
@@ -154,9 +240,17 @@ body.touch #panel-trigger {
   justify-content: center;
   transition: opacity 0.6s ease;
 }
+/* Hidden = fully out of sight AND out of the accessibility tree.
+   `opacity: 0` alone still leaves the overlay focusable/announced, so
+   VoiceOver on iPad kept reading "Initializing 3D engine…" after the app
+   had already booted. `visibility: hidden` is applied only AFTER the fade
+   finishes (delayed transition) so the 0.6s fade still plays.
+   SUGGESTIONS/04-boot-overlay-fix.md */
 #boot-overlay.hidden {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
 }
 /* Splash screen: aircraft hangar picker */
 #splash-screen {
@@ -176,6 +270,8 @@ body.touch #panel-trigger {
 #splash-screen.hidden {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
 }
 .splash-inner {
   text-align: center;

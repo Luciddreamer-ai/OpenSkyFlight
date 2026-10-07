@@ -42,8 +42,81 @@ export async function createRenderer() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.maxPixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(CLEAR_COLOR);
+
+  // --- Context-loss guard -------------------------------------------------
+  // Pointer-lock engagement could reliably kill the engine after 2-3 cycles
+  // (SUGGESTIONS/06-pointer-lock-guard.md). It is not yet known whether that
+  // is synthetic input in a headless VM or a genuine device/context loss, so
+  // handle the loss itself: surface a recoverable state instead of hanging
+  // forever on the boot overlay with a dead canvas.
+  attachContextLossHandlers(renderer);
+
   document.getElementById('canvas-container').appendChild(renderer.domElement);
   return renderer;
+}
+
+/**
+ * Show a full-screen recoverable state when the GPU context is lost.
+ * `webglcontextlost` fires for the WebGL backend; WebGPURenderer exposes
+ * `renderer.backend.device.lost` (a promise) for the WebGPU backend. Both are
+ * wired up. Recovery is a reload because rebuilding the whole scene graph
+ * (terrain LOD, flight state) in place is not safe mid-flight.
+ */
+function showContextLostUI(reason) {
+  const overlay = document.getElementById('boot-overlay');
+  if (!overlay) return;
+  const status = document.getElementById('boot-status');
+  const errBox = document.getElementById('boot-error');
+  overlay.classList.remove('hidden');
+  if (status) status.textContent = 'The graphics engine stopped.';
+  if (errBox) {
+    errBox.style.display = 'block';
+    errBox.textContent =
+      `The GPU context was lost${reason ? ` (${reason})` : ''}.\n\n` +
+      'This usually means the device reclaimed GPU memory, or the tab was ' +
+      'backgrounded for a long time. Reload to fly again.\n\n' +
+      'If it keeps happening, try ?renderer=webgl to use the WebGL fallback.';
+    // Make recovery a single action.
+    const btn = document.createElement('button');
+    btn.textContent = 'RELOAD';
+    btn.style.cssText =
+      'display:block;margin-top:14px;padding:10px 22px;font:inherit;font-size:13px;' +
+      'letter-spacing:2px;cursor:pointer;color:#0a0a1a;background:#00ff88;' +
+      'border:none;border-radius:3px;';
+    btn.addEventListener('click', () => location.reload());
+    errBox.appendChild(btn);
+  }
+}
+
+function attachContextLossHandlers(renderer) {
+  const canvas = renderer.domElement;
+  if (!canvas) return;
+  let signalled = false;
+
+  const signal = (reason) => {
+    if (signalled) return;
+    signalled = true;
+    Logger.error('Renderer', `GPU context lost: ${reason}`);
+    showContextLostUI(reason);
+  };
+
+  // WebGL backend
+  canvas.addEventListener(
+    'webglcontextlost',
+    (e) => {
+      e.preventDefault(); // allow a later restore
+      signal('webglcontextlost');
+    },
+    false,
+  );
+
+  // WebGPU backend — device loss is a promise, not an event.
+  const device = renderer?.backend?.device;
+  if (device && typeof device.lost?.then === 'function') {
+    device.lost
+      .then((info) => signal(info?.reason || info?.message || 'device lost'))
+      .catch(() => signal('device lost'));
+  }
 }
 
 export function createScene() {

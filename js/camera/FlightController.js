@@ -1,12 +1,17 @@
 import * as THREE from 'three';
+import Logger from '../utils/Logger.js';
+import { showNotification } from '../ui/Notification.js';
 import { CONFIG } from '../utils/config.js';
-import {
-  RATE_DAMP_FACTOR,
-  INITIAL_PITCH,
-} from '../constants/camera.js';
+import { RATE_DAMP_FACTOR, INITIAL_PITCH } from '../constants/camera.js';
 
 /** Max vertical speed for stick/R-F climb & descend (m/s) */
 const CLIMB_SPEED = 400;
+// Minimum gap between pointer-lock requests. Browsers throttle rapid re-locks
+// and repeated unguarded calls can wedge the lock state.
+const LOCK_RETRY_COOLDOWN_MS = 750;
+// Surface a toast after this many consecutive failures, so a stuck lock is
+// visible instead of silently doing nothing.
+const LOCK_FAILURE_WARN_AT = 3;
 
 export default class FlightController {
   constructor(camera, domElement) {
@@ -41,24 +46,79 @@ export default class FlightController {
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
     this._onPointerLockChange = this._onPointerLockChange.bind(this);
+    this._onPointerLockError = this._onPointerLockError.bind(this);
     this._onClick = this._onClick.bind(this);
+    // Pointer-lock request bookkeeping (see _onClick).
+    this._lockRequestPending = false;
+    this._lastLockAttempt = -Infinity;
+    this._lockFailures = 0;
 
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('keydown', this._onKeyDown);
     document.addEventListener('keyup', this._onKeyUp);
     document.addEventListener('pointerlockchange', this._onPointerLockChange);
+    document.addEventListener('pointerlockerror', this._onPointerLockError);
     domElement.addEventListener('click', this._onClick);
   }
 
   _onClick() {
     // requestPointerLock doesn't exist on iPad Safari — guard it
-    if (!this.locked && typeof this.domElement.requestPointerLock === 'function') {
-      this.domElement.requestPointerLock();
+    if (this.locked || typeof this.domElement.requestPointerLock !== 'function') return;
+
+    // Repeated unguarded lock requests are a known way to wedge a browser's
+    // pointer-lock state, and the engine death reported in
+    // SUGGESTIONS/06 happened after 2-3 engage cycles. Serialize the requests,
+    // swallow rejections (they used to surface as unhandled rejections), and
+    // count failures so it is possible to tell "lock never engaged" apart from
+    // "the GPU context actually died".
+    const now = performance.now();
+    if (this._lockRequestPending || now - this._lastLockAttempt < LOCK_RETRY_COOLDOWN_MS) return;
+
+    this._lastLockAttempt = now;
+    this._lockRequestPending = true;
+
+    let result;
+    try {
+      result = this.domElement.requestPointerLock();
+    } catch (err) {
+      this._lockRequestPending = false;
+      this._recordLockFailure('throw: ' + (err && err.message));
+      return;
+    }
+
+    // Chrome returns a promise; older Safari returns undefined.
+    if (result && typeof result.then === 'function') {
+      result
+        .then(() => {
+          this._lockRequestPending = false;
+          this._lockFailures = 0;
+        })
+        .catch((err) => {
+          this._lockRequestPending = false;
+          this._recordLockFailure(err && err.message ? err.message : 'rejected');
+        });
+    } else {
+      this._lockRequestPending = false;
     }
   }
 
+  _recordLockFailure(reason) {
+    this._lockFailures++;
+    Logger.warn('Flight', `Pointer lock request failed (${this._lockFailures}x): ${reason}`);
+    if (this._lockFailures === LOCK_FAILURE_WARN_AT) {
+      showNotification('Mouse steering could not engage. Touch controls are unaffected.', 'warn');
+    }
+  }
+
+  _onPointerLockError() {
+    this._lockRequestPending = false;
+    this._recordLockFailure('pointerlockerror event');
+  }
+
   _onPointerLockChange() {
-    this.locked = document.pointerLockElement === this.domElement;
+    const nowLocked = document.pointerLockElement === this.domElement;
+    this.locked = nowLocked;
+    if (nowLocked) this._lockFailures = 0;
   }
 
   _onMouseMove(e) {
@@ -194,6 +254,7 @@ export default class FlightController {
     document.removeEventListener('keydown', this._onKeyDown);
     document.removeEventListener('keyup', this._onKeyUp);
     document.removeEventListener('pointerlockchange', this._onPointerLockChange);
+    document.removeEventListener('pointerlockerror', this._onPointerLockError);
     this.domElement.removeEventListener('click', this._onClick);
   }
 }

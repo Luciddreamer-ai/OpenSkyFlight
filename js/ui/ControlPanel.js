@@ -38,28 +38,69 @@ export default class ControlPanel {
   _setupHoverBehavior() {
     const trigger = document.getElementById('panel-trigger');
 
+    // Reflect open state on <body> so the trigger's chevron can flip from
+    // "\u2039" (open) to "\u203a" (close) via CSS.
+    const syncBodyClass = () => {
+      const open = this.panel.classList.contains('visible');
+      document.body.classList.toggle('panel-open', open);
+      // Keep aria-expanded honest for screen readers.
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
     const showPanel = () => {
       clearTimeout(this._hideTimeout);
       this.panel.classList.add('visible');
+      syncBodyClass();
+    };
+
+    const hidePanel = () => {
+      this.panel.classList.remove('visible');
+      syncBodyClass();
     };
 
     const scheduleHide = () => {
       clearTimeout(this._hideTimeout);
-      this._hideTimeout = setTimeout(() => {
-        this.panel.classList.remove('visible');
-      }, 300);
+      this._hideTimeout = setTimeout(hidePanel, 300);
     };
 
-    trigger.addEventListener('mouseenter', showPanel);
-    trigger.addEventListener('mouseleave', scheduleHide);
-    this.panel.addEventListener('mouseenter', showPanel);
-    this.panel.addEventListener('mouseleave', scheduleHide);
+    // Tap/click is the PRIMARY mechanism on every device, not just touch: the
+    // old 300ms hover auto-hide was fragile under an imprecise finger, and on
+    // touch it could close the drawer immediately after opening it. Hover is
+    // kept as a convenience on pointer-precise devices only.
+    const coarsePointer =
+      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0;
 
-    // Touch devices have no hover: tapping the trigger strip toggles the panel.
-    // (On touch the strip also sits above the open panel via CSS, so it stays tappable.)
+    if (!coarsePointer) {
+      trigger.addEventListener('mouseenter', showPanel);
+      trigger.addEventListener('mouseleave', scheduleHide);
+      this.panel.addEventListener('mouseenter', showPanel);
+      this.panel.addEventListener('mouseleave', scheduleHide);
+    }
+
     trigger.addEventListener('click', () => {
       clearTimeout(this._hideTimeout);
       this.panel.classList.toggle('visible');
+      syncBodyClass();
+    });
+
+    // Escape closes the panel (desktop affordance; harmless on touch).
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.panel.classList.contains('visible')) {
+        clearTimeout(this._hideTimeout);
+        hidePanel();
+      }
+    });
+
+    // Opening the drawer should not leave it stranded: close it when a
+    // pointer-down lands outside both the panel and the trigger. This replaces
+    // the "auto-closes and cannot be reopened" dead end playtesters hit.
+    document.addEventListener('pointerdown', (e) => {
+      if (!this.panel.classList.contains('visible')) return;
+      if (this.panel.contains(e.target) || trigger.contains(e.target)) return;
+      clearTimeout(this._hideTimeout);
+      hidePanel();
     });
   }
 

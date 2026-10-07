@@ -78,7 +78,7 @@ export default class TouchControls {
           e.stopPropagation();
           this._pressKey(btn.dataset.key);
         },
-        { passive: false }
+        { passive: false },
       );
       // Fallback for stylus/mouse taps on the buttons
       btn.addEventListener('mousedown', (e) => {
@@ -128,7 +128,7 @@ export default class TouchControls {
     return (
       target instanceof Element &&
       !!target.closest(
-        '#control-panel, #flightplan-menu, #log-panel, #throttle-slider, #location-dialog, input, select, textarea, a, button'
+        '#control-panel, #flightplan-menu, #log-panel, #throttle-slider, #location-dialog, input, select, textarea, a, button',
       )
     );
   }
@@ -180,7 +180,7 @@ export default class TouchControls {
         dragging = true;
         setFromClientY(e.changedTouches[0].clientY);
       },
-      { passive: false }
+      { passive: false },
     );
     root.addEventListener(
       'touchmove',
@@ -190,7 +190,7 @@ export default class TouchControls {
         e.stopPropagation();
         setFromClientY(e.changedTouches[0].clientY);
       },
-      { passive: false }
+      { passive: false },
     );
     const endDrag = () => {
       dragging = false;
@@ -245,7 +245,7 @@ export default class TouchControls {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`,
-          { headers: { Accept: 'application/json' } }
+          { headers: { Accept: 'application/json' } },
         );
         const data = await res.json();
         if (data && data.length > 0 && data[0].lat && data[0].lon) {

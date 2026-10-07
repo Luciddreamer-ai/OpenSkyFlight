@@ -76,13 +76,24 @@ export default class AircraftManager {
 
     this.mesh.rotation.y = Math.PI;
 
+    // The glTF ships no embedded texture (the 972KB one it used to carry was
+    // dead weight — it was decoded, then immediately replaced by the PNG
+    // below). The plane's single source of texture is Rafale_texture.png.
     const texture = await new THREE.TextureLoader().loadAsync('assets/models/rafale/Rafale_texture.png');
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
+    // Apply to every mesh that uses a *texturable* material. Do NOT gate on
+    // `child.material.map` being truthy: now that the glTF embeds no texture,
+    // that guard is always false and the plane would render untextured.
+    // Target the 'Paint' material by name instead — the other material in the
+    // file is 'Glass', which is deliberately untextured (baseColorFactor black).
     this.mesh.traverse((child) => {
-      if (child.isMesh && child.material && child.material.map) {
-        child.material.map = texture;
-        child.material.needsUpdate = true;
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of materials) {
+        if (mat.name === 'Glass') continue;
+        mat.map = texture;
+        mat.needsUpdate = true;
       }
     });
 

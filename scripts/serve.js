@@ -54,12 +54,21 @@ const SOURCES = {
 const MIME = {
   '.html': 'text/html',
   '.js': 'application/javascript',
+  // .mjs is JavaScript too. Without this, any .mjs file is served as
+  // application/octet-stream and browsers refuse to execute it under strict
+  // MIME checking ("Expected a JavaScript-or-Wasm module script").
+  '.mjs': 'application/javascript',
   '.css': 'text/css',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.json': 'application/json',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.glb': 'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
+  '.bin': 'application/octet-stream',
+  '.woff2': 'font/woff2',
 };
 
 // Content types per source (ESRI satellite returns JPEG, others PNG)
