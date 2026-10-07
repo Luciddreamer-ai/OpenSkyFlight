@@ -385,9 +385,9 @@ function stepMission(dt) {
       winchLine.visible = true;
       if (G.rescueT >= RESCUE_TIME) completeRescue();
     } else {
-      G.rescueT = Math.max(0, G.rescueT - dt * 2);
-      $('rescue-bar').style.width = `${(G.rescueT / RESCUE_TIME) * 100}%`;
-      if (G.rescueT <= 0) { $('rescue-wrap').classList.remove('show'); winchLine.visible = false; }
+      G.rescueT = 0;
+      $('rescue-bar').style.width = '0%';
+      $('rescue-wrap').classList.remove('show'); winchLine.visible = false;
     }
   }
   $('hud-rescues').textContent = `RESCUES ${G.rescues}`;
