@@ -4,7 +4,19 @@
 
 A browser-based 3D flight simulator over real-world terrain, home-based in **Sitka, Alaska**. Take off from Sitka Rocky Gutierrez Airport, soar over Kruzof Island and Mount Edgecumbe, or jump anywhere on Earth.
 
-Built from [OpenSkyFlight](https://github.com/jeanjerome/OpenSkyFlight) by Jean Jérôme — all credit for the original terrain engine, WebGPU renderer, and flight model goes to him. This fork reshapes it into a game platform with touch controls, a Sitka home base, and (coming soon) mini-games.
+Built from [OpenSkyFlight](https://github.com/jeanjerome/OpenSkyFlight) by Jean Jérôme — all credit for the original terrain engine, WebGPU renderer, and flight model goes to him. This fork reshapes it into a game platform with touch controls, a Sitka home base, and 9 playable mini-games.
+
+## Mini-Games (all live)
+
+- **[Jayhawk Rescue](https://lucineer.github.io/OpenSkyFlight/helicopter/)** — Coast Guard helicopter rescue: hover over distressed boats for 8 seconds
+- **[Ring Run](https://lucineer.github.io/OpenSkyFlight/games/ring-run/)** — thread waypoints against the clock
+- **[Slalom](https://lucineer.github.io/OpenSkyFlight/games/slalom/)** — low alternating gates
+- **[Cargo Drop](https://lucineer.github.io/OpenSkyFlight/games/cargo-drop/)** — pick up cargo, release at the right height
+- **[Glide](https://lucineer.github.io/OpenSkyFlight/games/glide/)** — no engine, manage your energy
+- **[Island Hop](https://lucineer.github.io/OpenSkyFlight/games/island-hop/)** — chill flight, six real places, no fail state
+- **[Wildlife Watch](https://lucineer.github.io/OpenSkyFlight/games/wildlife-watch/)** — spot and identify animals
+- **[Bush Pilot](https://lucineer.github.io/OpenSkyFlight/games/bush-pilot/)** — backcountry flying
+- **[Ridge Runner](https://lucineer.github.io/OpenSkyFlight/games/ridge-runner/)** — low-level ridge running
 
 ![WebGPU](https://img.shields.io/badge/WebGPU-Three.js-green)
 ![iPad](https://img.shields.io/badge/iPad-touch_controls-blue)
