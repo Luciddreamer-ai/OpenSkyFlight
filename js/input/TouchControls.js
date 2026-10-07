@@ -119,7 +119,7 @@ export default class TouchControls {
         'R : hi-res terrain (static views)<br>' +
         'N : record waypoints | Shift+N : clear plan | P : add waypoint<br>' +
         'L : load flight plan | G : autopilot on/off<br>' +
-        'B : benchmark | Shift+B : store baseline';
+        'B : drop bomb (B-17) | N : benchmark | Shift+N : store baseline';
     }
   }
 
