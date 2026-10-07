@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#000000" />
+  <title>Bush Pilot — Sitka Skies</title>
+  <link rel="icon" type="image/png" href="../../assets/favicon.png" />
+  <link rel="stylesheet" href="../game.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.0/examples/jsm/",
+      "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.183.0/examples/jsm/",
+      "three-tile": "../../vendor/three-tile/packages/lib/dist/three-tile-osf.js",
+      "stats.js": "https://esm.sh/stats.js@0.17.0"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="boot-overlay">
+    <div class="boot-inner">
+      <div class="boot-title">BUSH PILOT</div>
+      <div class="boot-status" id="boot-status">Loading…</div>
+    </div>
+  </div>
+
+  <div id="hud-top">
+    <span id="hud-score">SCORE 0</span>
+    <span id="hud-dist"></span>
+    <span id="hud-best"></span>
+  </div>
+  <div id="hud-alt"><span id="hud-agl">AGL —</span> <span id="hud-vs">VS —</span></div>
+  <div id="hud-speed">0 kt</div>
+  <div id="prox-wrap"><div id="prox-bar"></div><div id="prox-label">SINK RATE</div></div>
+  <div id="center-msg"></div>
+
+  <div id="stick-zone"><div id="stick-knob"></div></div>
+  <div id="throttle-zone">
+    <div id="throttle-readout">0%</div>
+    <div id="throttle-track"><div id="throttle-fill" style="height:0%"></div></div>
+  </div>
+
+  <div id="top-right"><button id="btn-pause" type="button" aria-label="Pause">II</button></div>
+  <a id="back-link" href="../" aria-label="Back to games">&#8592;</a>
+  <div id="pause-overlay" class="hidden">
+    <div class="pause-card"><h2>PAUSED</h2><p>Tap PAUSE to resume &middot; &#8592; for the game list</p></div>
+  </div>
+
+  <script type="module" src="js/bush-pilot.js"></script>
+</body>
+</html>
