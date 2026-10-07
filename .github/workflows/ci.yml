@@ -81,3 +81,23 @@ jobs:
 
       - name: Assert the watchdog and telemetry detect what they claim
         run: node scripts/check-diagnostics.mjs
+
+  # Neither `three` nor `three-tile` appears in package.json or
+  # package-lock.json: three is a jsDelivr URL in each page's importmap and
+  # three-tile is a vendored fork. So the versions the renderer actually loads
+  # are governed by strings in HTML files, and nothing was checking they
+  # agreed. This gate caught two of the four pages pinning a different
+  # (nonexistent) path. It runs on every push, because the failure it prevents
+  # is a 404 that only shows up as a blank canvas in production.
+  runtime-deps:
+    name: Renderer deps consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Assert three pins agree across all pages and the fork is present
+        run: node scripts/check-runtime-deps.mjs

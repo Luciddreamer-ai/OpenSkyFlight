@@ -10,8 +10,9 @@
     "format": "prettier --write \"js/**/*.js\" \"games/**/*.js\" \"*.js\" \"scripts/**/*.js\"",
     "format:check": "prettier --check \"js/**/*.js\" \"games/**/*.js\" \"*.js\" \"scripts/**/*.js\"",
     "check:imports": "node scripts/check-imports.mjs",
-    "ci": "npm run lint && npm run format:check && npm run check:imports && npm run check:diagnostics",
-    "check:diagnostics": "node scripts/check-diagnostics.mjs"
+    "ci": "npm run lint && npm run format:check && npm run check:imports && npm run check:diagnostics && npm run check:runtime-deps",
+    "check:diagnostics": "node scripts/check-diagnostics.mjs",
+    "check:runtime-deps": "node scripts/check-runtime-deps.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
