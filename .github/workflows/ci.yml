@@ -7,6 +7,9 @@
 # Notes:
 #  - No test suite exists yet, so there is no `npm test` step. When tests are
 #    added, add them here — the point of this file is that the gate is real.
+#  - Each job calls an individual npm script rather than `npm run ci`, so a
+#    new gate added to the `ci` script is NOT automatically covered here. The
+#    diagnostics job below exists because of exactly that trap.
 #  - `npm ci` requires package-lock.json to be in sync with package.json.
 name: CI
 
@@ -60,3 +63,21 @@ jobs:
       # ES modules, so a bad specifier is a runtime 404 that lint cannot see.
       - name: Check every relative import resolves
         run: node scripts/check-imports.mjs
+
+  # The diagnostics layer claims it detects stalled render loops, long frames
+  # and NaN flight state. A claim like that is worthless without something that
+  # executes it, so this job runs the assertions that drive those code paths.
+  # It is a separate job rather than a step in the lint job so that a failure
+  # reads as "the detector is broken", not "the linter is broken".
+  diagnostics:
+    name: Diagnostics detectors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Assert the watchdog and telemetry detect what they claim
+        run: node scripts/check-diagnostics.mjs
