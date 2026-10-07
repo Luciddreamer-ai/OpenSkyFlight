@@ -285,6 +285,12 @@ async function main() {
       centerMsg(`${points}\n${G.result}`, isBest && points >= 80 ? 'good' : 'danger');
       setHud('hud-best', `BEST ${isBest ? points : (G.best ?? '—')}`);
       setHud('hud-score', `SCORE ${points}`);
+      // Show restart button
+      const restartBtn = document.getElementById('btn-restart');
+      if (restartBtn) {
+        restartBtn.style.display = '';
+        restartBtn.onclick = () => location.reload();
+      }
       return;
     }
 
