@@ -105,7 +105,9 @@ runGame({
       // Ballistic fall, integrated explicitly so it is frame-rate independent.
       const g = terrain.getGroundElevation(ctx.dropped.x, ctx.dropped.z);
       ctx.dropped.vy -= 9.8 * dt;
+      ctx.dropped.x += ctx.dropped.vx * dt;
       ctx.dropped.y += ctx.dropped.vy * dt;
+      ctx.dropped.z += ctx.dropped.vz * dt;
       ctx.pod.position.copy(ctx.dropped);
       if (ctx.dropped.y <= g + 2) {
         ctx.pod.position.y = g + 2;
@@ -148,7 +150,9 @@ function _release(ctx) {
     y: ctx.flight.position.y - 6,
     z: ctx.flight.position.z,
     // Inherit the aircraft's own velocity, so the line is something you fly.
+    vx: ctx.flight.velocity.x,
     vy: ctx.flight.velocity.y,
+    vz: ctx.flight.velocity.z,
   };
   ctx.pod.visible = true;
   ctx.msg = 'RELEASED';
