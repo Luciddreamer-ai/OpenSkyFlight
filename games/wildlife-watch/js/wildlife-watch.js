@@ -109,18 +109,52 @@ runGame({
   },
 });
 
-/** Closest un-found marker within a generous tap radius, in screen terms. */
+/** Closest un-found marker within a generous tap radius, using actual tap raycast. */
 function nearest(ctx, ev) {
   const cam = ctx.camera;
+  const rect = ctx.renderer.domElement.getBoundingClientRect();
+  // Convert tap to normalized device coordinates
+  const ndc = {
+    x: ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+    y: -((ev.clientY - rect.top) / rect.height) * 2 + 1
+  };
+  // Raycast from camera through tap point
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(ndc, cam);
+  // Check each unfound marker for intersection
   let best = null;
   let bestD = Infinity;
   for (const m of ctx.marks) {
     if (m.userData.found) continue;
     const d = m.position.distanceTo(cam.position);
     if (d > 2200) continue;
-    if (d < bestD) {
-      bestD = d;
-      best = m;
+    // Raycast against the marker mesh
+    const intersects = raycaster.intersectObject(m, true);
+    if (intersects.length > 0) {
+      if (d < bestD) {
+        bestD = d;
+        best = m;
+      }
+    }
+  }
+  // Fallback: if no direct hit, check screen-space distance (generous tap radius)
+  if (!best) {
+    for (const m of ctx.marks) {
+      if (m.userData.found) continue;
+      const d = m.position.distanceTo(cam.position);
+      if (d > 2200) continue;
+      // Project marker to screen space
+      const v = m.position.clone().project(cam);
+      const sx = (v.x * 0.5 + 0.5) * rect.width;
+      const sy = (-v.y * 0.5 + 0.5) * rect.height;
+      const tapX = ev.clientX - rect.left;
+      const tapY = ev.clientY - rect.top;
+      const screenDist = Math.hypot(sx - tapX, sy - tapY);
+      // 100px tap radius (generous for touch)
+      if (screenDist < 100 && d < bestD) {
+        bestD = d;
+        best = m;
+      }
     }
   }
   return bestD < 1600 ? best : null;
