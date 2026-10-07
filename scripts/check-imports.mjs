@@ -20,10 +20,13 @@ import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs';
 import { join, dirname, resolve, relative, sep } from 'node:path';
 
 const ROOT = process.argv[2] ? resolve(process.argv[2]) : process.cwd();
-const SRC_DIR = join(ROOT, 'js');
+// Check the main app AND every standalone mini-game. Games live one level
+// deeper (games/<id>/js/), so their relative specifiers have a different depth
+// and are exactly where a wrong-directory-level import hides.
+const SRC_DIRS = [join(ROOT, 'js'), join(ROOT, 'games')].filter(existsSync);
 
-if (!existsSync(SRC_DIR)) {
-  console.error(`check-imports: no js/ directory under ${ROOT}`);
+if (SRC_DIRS.length === 0) {
+  console.error(`check-imports: no js/ or games/ directory under ${ROOT}`);
   process.exit(2);
 }
 
@@ -39,7 +42,7 @@ function walk(dir, out = []) {
 // Match: import ... from 'x' | export ... from 'x' | import 'x'
 const SPEC_RE = /(?:^|\s)(?:import|export)\s+(?:[\s\S]*?\sfrom\s+)?['"]([^'"]+)['"]/g;
 
-const files = walk(SRC_DIR).sort();
+const files = SRC_DIRS.flatMap((d) => walk(d)).sort();
 const failures = [];
 let checked = 0;
 

@@ -9,6 +9,7 @@
 
 import { createServer } from 'node:http';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -129,9 +130,23 @@ async function serveTile(req, res, source, z, x, y) {
   }
 }
 
+function isDirectory(p) {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 async function serveStatic(req, res, urlPath) {
   const safePath = urlPath.replace(/\.\./g, '');
-  const filePath = join(ROOT, safePath === '/' ? 'index.html' : safePath);
+  // Directory requests must resolve to that directory's index.html, or links
+  // like href="games/" 404 while the file itself is right there. This is what
+  // `npx serve` does and what the GAMES button link depends on.
+  // '' and '/' both mean "the site root"; otherwise resolve the path and, when
+  // it is a directory (or was requested with a trailing slash), append index.
+  const candidate = safePath === '' || safePath === '/' ? ROOT : join(ROOT, safePath);
+  const filePath = isDirectory(candidate) || safePath.endsWith('/') ? join(candidate, 'index.html') : candidate;
   const ext = extname(filePath);
 
   try {

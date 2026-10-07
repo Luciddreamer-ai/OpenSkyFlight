@@ -81,6 +81,11 @@ export async function createRenderer() {
   // Published so the control panel can tell the user what was detected. Kept
   // deliberately small — this is a diagnostic surface, not a settings API.
   window.__osfCapabilityTier = caps.tier;
+  try {
+    localStorage.setItem('osf.tier', caps.tier);
+  } catch {
+    /* private mode — the games page will simply omit the badge */
+  }
   window.__osfCapabilityReasons = caps.reasons;
   return renderer;
 }
