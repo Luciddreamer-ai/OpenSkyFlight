@@ -157,6 +157,15 @@ body.touch #panel-trigger {
 #boot-overlay.hidden {
   opacity: 0;
   pointer-events: none;
+  /* Hidden = fully out of sight AND out of the accessibility tree.
+     `opacity: 0` alone still leaves the overlay focusable/announced, so
+     VoiceOver on iPad kept reading "Initializing 3D engine…" after the app
+     had already booted. `visibility: hidden` is applied only AFTER the fade
+     finishes (delayed transition) so the fade still plays. */
+  visibility: hidden;
+  transition:
+    opacity 0.6s ease,
+    visibility 0s linear 0.6s;
 }
 /* Splash screen: aircraft hangar picker */
 #splash-screen {
@@ -584,6 +593,18 @@ body.touch #panel-trigger {
 .minimap-zoom-btns button:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+/* These were 21x20, which is unusable with a thumb — smaller than a fingernail.
+   On a coarse pointer (any touch screen) they get a full 44x44 target. The
+   box grows outward from the same corner so the minimap itself does not move.
+   A mouse can hit 21px comfortably, so desktop keeps the compact form. */
+@media (pointer: coarse) {
+  .minimap-zoom-btns button {
+    min-width: 44px;
+    min-height: 44px;
+    line-height: 42px;
+    font-size: 16px;
+  }
 }
 #minimap {
   display: block;
