@@ -6,8 +6,12 @@ import { acquireFetch, releaseFetch } from './fetchSemaphore.js';
 import { tileUrl } from './TileUrls.js';
 import Logger from '../utils/Logger.js';
 export default class ElevationProvider {
+  // LRU cache: each tile is a 256x256 Float32Array (256KB). Cap at 300 tiles
+  // (~75MB) to avoid unbounded growth during long flights (iPad OOM killer).
+  static MAX_CACHED_TILES = 300;
+
   constructor() {
-    this._cache = new Map();
+    this._cache = new Map(); // key -> heightmap; insertion order = LRU order
     this._pending = new Map(); // in-flight fetch promises, keyed by tile key
     this._canvas = document.createElement('canvas');
     this._canvas.width = 256;
@@ -18,8 +22,12 @@ export default class ElevationProvider {
   async fetchHeightmap(tileX, tileY, zoom) {
     const key = `${zoom}/${tileX}/${tileY}`;
     if (this._cache.has(key)) {
+      // Refresh LRU position: delete + re-insert moves to most-recent
+      const hm = this._cache.get(key);
+      this._cache.delete(key);
+      this._cache.set(key, hm);
       Logger.debug('Elevation', `Cache hit: ${key}`);
-      return this._cache.get(key);
+      return hm;
     }
 
     // Deduplicate in-flight requests: return existing promise if fetch already running
@@ -67,6 +75,11 @@ export default class ElevationProvider {
       Logger.info('Elevation', `Fetched ${key}`, { min: Math.round(min), max: Math.round(max) });
 
       this._cache.set(key, heightmap);
+      // Evict least-recently-used tiles beyond the cap
+      while (this._cache.size > ElevationProvider.MAX_CACHED_TILES) {
+        const oldestKey = this._cache.keys().next().value;
+        this._cache.delete(oldestKey);
+      }
       return heightmap;
     } finally {
       releaseFetch();

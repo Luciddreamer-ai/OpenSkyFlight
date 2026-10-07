@@ -5,6 +5,9 @@ import {
   INITIAL_PITCH,
 } from '../constants/camera.js';
 
+/** Max vertical speed for stick/R-F climb & descend (m/s) */
+const CLIMB_SPEED = 400;
+
 export default class FlightController {
   constructor(camera, domElement) {
     this.camera = camera;
@@ -16,10 +19,11 @@ export default class FlightController {
     this.yawRate = 0;
     this.pitchRate = 0;
     this.keys = {};
-    this.touchMove = { x: 0, y: 0 }; // virtual joystick: x = strafe, y = forward (-1..1)
-    this.throttle = 0.3; // cruise throttle 0..1 — persistent forward speed, plane flies on load
+    this.touchMove = { x: 0, y: 0 }; // virtual joystick: x = strafe, y = climb (+1) / descend (-1)
+    this.throttle = 0.1; // cruise throttle 0..1 — persistent forward speed, plane flies on load
     this.locked = false;
     this.enabled = true;
+    this.agility = 1.0; // plane-specific handling multiplier (set by aircraft selection)
 
     this._pendingYaw = 0;
     this._pendingPitch = 0;
@@ -99,7 +103,7 @@ export default class FlightController {
   }
 
   /**
-   * Touch movement stick: x = strafe (-1..1), y = forward (-1..1).
+   * Touch movement stick: x = strafe (-1..1), y = climb (+1) / descend (-1).
    * Consumed in update() alongside the keyboard state.
    */
   setTouchMove(x, y) {
@@ -119,8 +123,16 @@ export default class FlightController {
     }
 
     // Accumulate yaw/pitch as scalars (no gimbal lock)
-    this.yaw += this._pendingYaw;
-    this.pitch += this._pendingPitch;
+    const hadPitchInput = this._pendingPitch !== 0;
+    this.yaw += this._pendingYaw * this.agility;
+    this.pitch += this._pendingPitch * this.agility;
+    // Auto-level: when the pilot isn't actively pitching, gently ease the
+    // nose back to level so cruise doesn't slowly descend into terrain.
+    if (!hadPitchInput && dt > 0) {
+      const levelRate = 0.1; // rad/s — subtle, doesn't fight deliberate input
+      const dp = Math.min(Math.abs(this.pitch), levelRate * dt);
+      this.pitch -= Math.sign(this.pitch) * dp;
+    }
     this._pendingYaw = 0;
     this._pendingPitch = 0;
 
@@ -138,24 +150,29 @@ export default class FlightController {
     const rx = this._right.x;
     const rz = this._right.z;
 
-    // Throttle (cruise) + stick + keyboard → axis inputs.
-    // Throttle is persistent: the plane keeps flying without holding the stick.
+    // Throttle (cruise) + keyboard → forward input. Throttle is persistent:
+    // the plane keeps flying without holding the stick.
+    // Touch stick Y and R/F keys → direct climb/descend (vertical speed).
     // Keyboard W/S and A/D keep their old full-deflection behavior.
     const clampAxis = (v) => Math.max(-1, Math.min(1, v));
-    let fwdInput = clampAxis((this.throttle || 0) + this.touchMove.y);
+    let fwdInput = clampAxis(this.throttle || 0);
     let strafeInput = clampAxis(this.touchMove.x);
     if (this.keys['ArrowUp'] || this.keys['KeyW']) fwdInput = 1;
     else if (this.keys['ArrowDown'] || this.keys['KeyS']) fwdInput = -1;
     if (this.keys['ArrowRight'] || this.keys['KeyD']) strafeInput = 1;
     else if (this.keys['ArrowLeft'] || this.keys['KeyA']) strafeInput = -1;
 
+    let climbInput = clampAxis(this.touchMove.y);
+    if (this.keys['KeyE']) climbInput = 1;
+    else if (this.keys['KeyQ']) climbInput = -1;
+
     let mx = fx * fwdInput + rx * strafeInput;
     let my = fy * fwdInput;
     let mz = fz * fwdInput + rz * strafeInput;
 
     const len = Math.sqrt(mx * mx + my * my + mz * mz);
-    // Proportional speed: throttle 0.3 alone cruises at 30% of cameraSpeed;
-    // full stick deflection or W still gives full speed.
+    // Proportional speed: throttle alone cruises at a fraction of cameraSpeed;
+    // W still gives full speed.
     const speedScale = Math.min(1, len);
     const speed = CONFIG.cameraSpeed * speedScale * dt;
     if (len > 0) {
@@ -165,7 +182,7 @@ export default class FlightController {
     }
 
     this.position.x += mx * speed;
-    this.position.y += my * speed;
+    this.position.y += my * speed + climbInput * CLIMB_SPEED * dt;
     this.position.z += mz * speed;
 
     this.yawRate *= Math.max(0, 1 - RATE_DAMP_FACTOR * dt);

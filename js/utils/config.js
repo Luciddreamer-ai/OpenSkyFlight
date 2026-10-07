@@ -2,8 +2,8 @@
  * @typedef {Object} AppConfig
  *
  * Real-world terrain:
- * @property {number}  lat                    - Latitude in decimal degrees (default: 45.8326 — Mont Blanc)
- * @property {number}  lon                    - Longitude in decimal degrees (default: 6.8652)
+ * @property {number}  lat                    - Latitude in decimal degrees (default: 57.0472 — Sitka Airport, Alaska)
+ * @property {number}  lon                    - Longitude in decimal degrees (default: -135.3619)
  * @property {number}  zoom                   - Tile zoom level (default: 15)
  * @property {number}  minZoom                - Minimum zoom for LOD rings (default: 3)
  * @property {number}  maxTotalTiles          - Maximum loaded tiles (default: 1000)
@@ -12,7 +12,7 @@
  * @property {boolean} hiResMode              - Hi-res zoom 18 mode (default: false)
  *
  * Camera & flight:
- * @property {number}  cameraSpeed            - Flight speed in units/sec, range [1..4000] (default: 800)
+ * @property {number}  cameraSpeed            - Flight speed in units/sec, range [1..4000] (default: 2400)
  * @property {string}  cameraMode             - 'chase' | 'cockpit' (default: 'chase')
  * @property {number}  mouseSensitivity       - Mouse look sensitivity (default: 0.002)
  *
@@ -54,12 +54,12 @@ const CONFIG_VALIDATION = {
 
 /** @type {AppConfig} */
 const CONFIG = {
-  cameraSpeed: 800,
+  cameraSpeed: 2400,
   cameraMode: 'chase',
   mouseSensitivity: 0.002,
   maxPixelRatio: 2,
-  lat: 45.8326, // Mont Blanc default
-  lon: 6.8652,
+  lat: 57.0472, // Sitka Rocky Gutierrez Airport (SIT), Alaska — default start
+  lon: -135.3619,
   zoom: 15,
   textureMode: 'satellite', // 'satellite' | 'osm' | 'sar' | 'elevation'
   minZoom: 3,

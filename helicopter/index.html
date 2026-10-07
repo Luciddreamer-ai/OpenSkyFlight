@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <script>
+    // Global error catcher — display JS errors on the boot screen for remote diagnosis
+    window.addEventListener('error', (e) => {
+      const el = document.getElementById('boot-status');
+      if (el) el.textContent = 'JS Error: ' + (e.message || e.error);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      const el = document.getElementById('boot-status');
+      if (el) el.textContent = 'Promise Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+    });
+  </script>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Jayhawk Rescue" />
+  <meta name="theme-color" content="#000000" />
+  <title>Jayhawk Rescue — Sitka Skies</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.0/examples/jsm/",
+      "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.183.0/examples/jsm/",
+      "three-tile": "../vendor/three-tile/packages/lib/dist/three-tile-osf.js"
+    }
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, 'Helvetica Neue', sans-serif; touch-action: none; }
+    #canvas-container { position: fixed; inset: 0; }
+    #canvas-container canvas { display: block; width: 100%; height: 100%; }
+    /* Boot overlay */
+    #boot-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: #020610; transition: opacity .6s; }
+    #boot-overlay.hidden { opacity: 0; pointer-events: none; }
+    .boot-inner { text-align: center; color: #7df9ff; }
+    .boot-title { font-size: 30px; letter-spacing: 6px; font-weight: 800; margin-bottom: 10px; }
+    .boot-sub { font-size: 13px; color: #4a7a8a; letter-spacing: 3px; margin-bottom: 18px; }
+    .boot-status { font-size: 15px; color: #9adbe8; }
+    /* HUD */
+    #hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; color: #dff6ff; }
+    #hud-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+    .hud-chip { background: rgba(2, 12, 22, .62); border: 1px solid rgba(125, 249, 255, .35); border-radius: 10px; padding: 7px 13px; font-size: 14px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+    #distress-banner { position: absolute; top: calc(58px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); max-width: 92vw; background: rgba(60, 4, 4, .78); border: 1px solid #ff5a5a; border-radius: 12px; padding: 10px 16px; text-align: center; display: none; }
+    #distress-banner.show { display: block; animation: pulse-red 1s infinite; }
+    @keyframes pulse-red { 0%,100% { box-shadow: 0 0 8px rgba(255,60,60,.4);} 50% { box-shadow: 0 0 22px rgba(255,60,60,.9);} }
+    #distress-title { font-size: 15px; font-weight: 800; color: #ffb3b3; letter-spacing: 1px; }
+    #distress-sub { font-size: 13px; color: #ffd9d9; margin-top: 3px; }
+    #bearing-wrap { position: absolute; top: calc(150px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+    #bearing-wrap.show { display: block; }
+    #bearing-arrow { font-size: 44px; color: #ffd75a; text-shadow: 0 0 12px rgba(255,215,90,.8); display: inline-block; transition: transform .12s linear; }
+    #bearing-dist { font-size: 14px; color: #ffe9a8; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    /* Rescue progress */
+    #rescue-wrap { position: absolute; bottom: calc(150px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 240px; display: none; text-align: center; }
+    #rescue-wrap.show { display: block; }
+    #rescue-label { font-size: 13px; letter-spacing: 2px; color: #7df9ff; margin-bottom: 6px; }
+    #rescue-bar-bg { height: 10px; border-radius: 6px; background: rgba(10, 30, 40, .7); border: 1px solid rgba(125,249,255,.5); overflow: hidden; }
+    #rescue-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #2ee6a8, #7df9ff); border-radius: 6px; }
+    /* Center message */
+    #center-msg { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 26px; font-weight: 800; letter-spacing: 3px; color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.8); text-align: center; display: none; white-space: pre-line; }
+    #center-msg.show { display: block; }
+    #center-msg.crash { color: #ff6b6b; }
+    /* Touch controls */
+    #tc-stick-base { position: fixed; z-index: 30; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(125,249,255,.5); background: rgba(10, 25, 35, .35); display: none; pointer-events: none; }
+    #tc-stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%; background: rgba(125,249,255,.55); transform: translate(-50%,-50%); }
+    #alt-slider { position: fixed; z-index: 30; right: calc(14px + env(safe-area-inset-right)); top: 22%; height: 46%; width: 44px; border-radius: 22px; background: rgba(10,25,35,.5); border: 1px solid rgba(125,249,255,.4); }
+    #alt-knob { position: absolute; left: 4px; right: 4px; height: 36px; border-radius: 18px; background: rgba(125,249,255,.65); }
+    #alt-label { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #9adbe8; letter-spacing: 1px; white-space: nowrap; }
+    #back-link { position: fixed; z-index: 30; left: calc(12px + env(safe-area-inset-left)); bottom: calc(12px + env(safe-area-inset-bottom)); color: #7df9ff; text-decoration: none; font-size: 13px; letter-spacing: 1px; background: rgba(2,12,22,.6); border: 1px solid rgba(125,249,255,.35); padding: 8px 12px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="boot-overlay">
+    <div class="boot-inner">
+      <div class="boot-title">JAYHAWK RESCUE</div>
+      <div class="boot-sub">SITKA SOUND &middot; US COAST GUARD</div>
+      <div class="boot-status" id="boot-status">Loading Sitka&hellip;</div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="hud-top">
+      <div class="hud-chip" id="hud-rescues">RESCUES 0</div>
+      <div class="hud-chip" id="hud-score">SCORE 0</div>
+      <div class="hud-chip" id="hud-time">00:00</div>
+      <div class="hud-chip" id="hud-alt">ALT 0m</div>
+    </div>
+    <div id="distress-banner">
+      <div id="distress-title"></div>
+      <div id="distress-sub"></div>
+    </div>
+    <div id="bearing-wrap">
+      <div id="bearing-arrow">&#10148;</div>
+      <div id="bearing-dist"></div>
+    </div>
+    <div id="rescue-wrap">
+      <div id="rescue-label">WINCH DOWN &mdash; HOLD POSITION</div>
+      <div id="rescue-bar-bg"><div id="rescue-bar"></div></div>
+    </div>
+    <div id="center-msg"></div>
+  </div>
+
+  <div id="tc-stick-base"><div id="tc-stick-knob"></div></div>
+  <div id="alt-slider"><div id="alt-label">ALT</div><div id="alt-knob"></div></div>
+  <a id="back-link" href="../">&#8592; SITKA SKIES</a>
+
+  <script type="module" src="js/heli-game.js"></script>
+</body>
+</html>

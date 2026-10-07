@@ -189,6 +189,16 @@ export default class GeoTerrainManager {
     return found;
   }
 
+  /** Count visible terrain tile meshes — used by the boot loader to know when Sitka is ready. */
+  countVisibleTiles() {
+    if (!this.tileMap) return 0;
+    let count = 0;
+    this.tileMap.traverse((child) => {
+      if (child.isMesh && child.visible && child !== this.tileMap) count++;
+    });
+    return count;
+  }
+
   _disposeTileMap(target) {
     this.scene.remove(target);
     target.dispose();
