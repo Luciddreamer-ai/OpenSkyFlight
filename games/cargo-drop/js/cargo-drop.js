@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeBeacon, makeGroundMark, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 const PICKUP = { x: 0, z: -1500 };
 const DROP_ZONE = { x: 1500, z: -3400, radius: 90 };
@@ -94,6 +96,7 @@ runGame({
         ctx.pickup.visible = false;
         ctx.msg = 'LOAD SECURED — HEAD FOR THE ZONE';
         ctx.msgUntil = ctx.t + 2.5;
+        soundFX.pickup();
       }
     } else if (ctx.phase === 'to-drop') {
       ctx.pod.position.copy(flight.position);
@@ -168,5 +171,8 @@ function _score(ctx, miss) {
   const accuracy = 1 - miss / DROP_ZONE.radius;
   ctx.msg = `HIT — ${Math.round(accuracy * 100)}% ACCURACY`;
   ctx.msgUntil = ctx.t + 3;
-  return Math.round(1000 * accuracy);
+  const pts = Math.round(1000 * accuracy);
+  showPopup(`+${pts}`, '50%', '35%', '#7cfc00');
+  soundFX.score(accuracy);
+  return pts;
 }
