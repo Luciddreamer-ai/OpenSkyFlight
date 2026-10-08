@@ -1,0 +1,91 @@
+/* Games launcher — dark, thumb-first, safe-area aware. */
+:root {
+  --bg: #05070f;
+  --card-bg: rgba(14, 22, 38, 0.86);
+  --border: rgba(125, 249, 255, 0.22);
+  --text: #dff3ff;
+  --dim: #7fa3b8;
+  --accent: #7df9ff;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body {
+  /* min-height, not height: the launcher centres its content vertically, and
+     a fixed height plus centring is how you get the top of a long list pushed
+     out of reach on a short window. min-height lets the page simply grow. */
+  min-height: 100%;
+  display: flex; flex-direction: column;
+  background: radial-gradient(120% 90% at 50% 0%, #0b1a2e 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+}
+#topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 14px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: linear-gradient(180deg, rgba(5,7,15,.96), rgba(5,7,15,.75));
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+#back-link {
+  color: var(--accent); text-decoration: none; font-size: 13px; letter-spacing: 1.5px;
+  padding: 9px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: rgba(2,12,22,.6);
+}
+#topbar h1 { margin: 0; font-size: 17px; letter-spacing: 6px; color: #fff; flex: 1; }
+#tier-badge {
+  font-size: 10px; letter-spacing: 1.5px; color: var(--dim);
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px;
+}
+#grid-wrap {
+  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+  max-width: 1180px;
+  /* `margin: auto` on a column flex item centres the block in whatever space
+     the topbar leaves over, both axes. Unlike `justify-content: center` it
+     degrades to 0 when the content is taller than the window, so the first
+     card is never pushed above the fold on a landscape phone. */
+  margin: auto;
+  width: 100%;
+}
+#featured { margin-bottom: 18px; }
+#grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+}
+.card {
+  display: flex; gap: 14px; text-decoration: none; color: inherit;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 118px;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.card:active { transform: scale(.985); }
+@media (hover: hover) {
+  .card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 8px 26px rgba(0,0,0,.5); }
+}
+.card-big {
+  min-height: 150px;
+  background: linear-gradient(135deg, rgba(0,255,136,.14), var(--card-bg) 55%);
+}
+.card-icon { font-size: 30px; line-height: 1; align-self: center; width: 40px; text-align: center; }
+.card-body { flex: 1; min-width: 0; }
+.card-name { font-size: 15px; letter-spacing: 2px; color: #fff; }
+.card-tag { font-size: 11px; color: var(--accent); margin-top: 3px; letter-spacing: .5px; }
+.card-blurb { font-size: 11.5px; color: var(--dim); margin-top: 7px; line-height: 1.5; }
+.card-skills { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.card-skills span {
+  font-size: 9px; letter-spacing: 1px; padding: 3px 7px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--dim);
+}
+.card-control { font-size: 9.5px; color: #5d7f94; margin-top: 7px; letter-spacing: .3px; }
+.card-locked { opacity: .45; }
+.soon { font-size: 9px; color: var(--dim); letter-spacing: 1px; }
+#hint {
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  font-size: 10.5px; color: #5d7f94; text-align: center; letter-spacing: .4px;
+}

@@ -13,11 +13,33 @@ import {
 export default class AdaptiveQualityManager {
   constructor(renderer) {
     this._renderer = renderer;
-    this._basePixelRatio = Math.min(window.devicePixelRatio, CONFIG.maxPixelRatio);
+    // Ceiling and floor come from the measured capability tier when available,
+    // not from fixed constants. A potato-tier device may never be allowed to
+    // render at 2x (it would melt), and a performance-tier desktop should not
+    // be held down to 0.5 by a transient hiccup. Without a probe the
+    // fallbacks preserve the previous fixed behaviour.
+    const budget = renderer?.capabilityBudget || null;
+    this._maxPixelRatio = budget?.pixelRatio ?? CONFIG.maxPixelRatio;
+    this._minPixelRatio = budget?.minPixelRatio ?? ADAPTIVE_MIN_PIXEL_RATIO;
+    this._tier = renderer?.capabilityTier || 'balanced';
+    this._basePixelRatio = Math.min(window.devicePixelRatio, this._maxPixelRatio);
     this._currentPixelRatio = this._basePixelRatio;
     this._ringBuffer = new Float32Array(FRAME_TIME_RING_SIZE);
     this._ringIndex = 0;
     this._ringFilled = false;
+  }
+
+  /** Current effective pixel ratio (exposed for the HUD / diagnostics). */
+  get pixelRatio() {
+    return this._currentPixelRatio;
+  }
+
+  get tier() {
+    return this._tier;
+  }
+
+  get minPixelRatio() {
+    return this._minPixelRatio;
   }
 
   update(frameTimeMs) {
@@ -34,7 +56,7 @@ export default class AdaptiveQualityManager {
 
     let targetRatio = this._currentPixelRatio;
     if (avgFt > ADAPTIVE_HIGH_FRAME_TIME) {
-      targetRatio = Math.max(ADAPTIVE_MIN_PIXEL_RATIO, this._currentPixelRatio - ADAPTIVE_SCALE_DOWN_STEP);
+      targetRatio = Math.max(this._minPixelRatio, this._currentPixelRatio - ADAPTIVE_SCALE_DOWN_STEP);
     } else if (avgFt < ADAPTIVE_LOW_FRAME_TIME) {
       targetRatio = Math.min(this._basePixelRatio, this._currentPixelRatio + ADAPTIVE_SCALE_UP_STEP);
     }

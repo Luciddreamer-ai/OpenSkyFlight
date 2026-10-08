@@ -63,6 +63,7 @@ export default class TouchControls {
         <button type="button" data-key="v" aria-label="Toggle cockpit/chase view">VIEW</button>
         <button type="button" data-key="t" aria-label="Cycle texture mode">TEX</button>
         <button type="button" data-key="h" aria-label="Toggle HUD">HUD</button>
+        <button type="button" data-key="b" id="tc-bomb" aria-label="Drop bomb" style="display:none">BOMB</button>
         <button type="button" id="tc-loc" aria-label="Choose flight location">LOC</button>
       </div>`;
     document.body.appendChild(ui);
@@ -118,7 +119,7 @@ export default class TouchControls {
         'R : hi-res terrain (static views)<br>' +
         'N : record waypoints | Shift+N : clear plan | P : add waypoint<br>' +
         'L : load flight plan | G : autopilot on/off<br>' +
-        'B : benchmark | Shift+B : store baseline';
+        'B : drop bomb (B-17) | N : benchmark | Shift+N : store baseline';
     }
   }
 

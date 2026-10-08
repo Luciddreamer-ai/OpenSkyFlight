@@ -219,6 +219,11 @@ async function initApp() {
     CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
     flightController.agility = selectedPlaneDef.agility || 1;
     Logger.info('App', `Flying ${selectedPlaneDef.name}`);
+    // Show BOMB button for bomber aircraft (touch controls)
+    const bombBtn = document.getElementById('tc-bomb');
+    if (bombBtn) {
+      bombBtn.style.display = selectedPlaneDef.bomber ? '' : 'none';
+    }
   } catch (err) {
     Logger.warn('App', 'Failed to load plane: ' + err.message);
   }
@@ -429,7 +434,7 @@ async function initApp() {
     }
   });
 
-  input.onKey('b', (e) => {
+  input.onKey('n', (e) => {
     if (e.shiftKey) {
       if (!benchmarkRunner._lastReport) {
         Logger.warn('App', 'No completed benchmark — run one first before storing baseline');
