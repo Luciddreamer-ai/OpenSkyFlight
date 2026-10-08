@@ -28,6 +28,7 @@
 // the player has failed four times, which is exactly when nobody is watching.
 
 import * as THREE from 'three';
+import { soundFX } from '../audio/SoundFX.js';
 import {
   bootWorld,
   GameInput,
@@ -82,6 +83,7 @@ function buildDom(spec) {
 
     <div id="top-right">
       <button id="btn-pause" type="button" aria-label="Pause">II</button>
+      <button id="btn-mute" type="button" aria-label="Mute sounds">♪</button>
     </div>
     <a id="back-link" href="../" aria-label="Back to games">&#8592;</a>
     <button id="btn-restart" type="button" aria-label="Restart" hidden>R</button>
@@ -200,6 +202,11 @@ export async function runGame(spec) {
     pauseOverlay?.classList.toggle('hidden', !ctx.paused);
   };
   $('btn-pause')?.addEventListener('click', togglePause);
+  $('btn-mute')?.addEventListener('click', () => {
+    const muted = soundFX.toggleMute();
+    $('btn-mute').textContent = muted ? '✕' : '♪';
+    if (!muted) soundFX.click();
+  });
   $('btn-restart')?.addEventListener('click', restart);
 
   function restart() {
@@ -248,6 +255,7 @@ export async function runGame(spec) {
       if (agl < 2.5 && vy < -9) {
         ctx.over = true;
         ctx.msg = '';
+        soundFX.crash();
         const cm = $('center-msg');
         if (cm) {
           cm.dataset.shell = 'crash';
