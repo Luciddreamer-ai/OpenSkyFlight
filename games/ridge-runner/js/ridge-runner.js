@@ -26,6 +26,8 @@ import {
   wireChrome,
 } from '../../../js/games/GameRuntime.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 // Sitka's Kruzof Island / Mount Edgecumbe area: dramatic, real ridgelines.
 const LAT = 57.0472;
@@ -153,10 +155,18 @@ async function main() {
       G.score += G.credit * dt * 12;
       G.dist += flight.speed * dt;
 
+      // Multiplier milestone popups: celebrate each new whole-number level.
+      const mult = Math.floor(G.credit);
+      if (mult > (G.lastMult ?? 1) && mult >= 2) {
+        showPopup(`×${mult} MULTIPLIER`, '50%', '30%', '#ff9f43');
+      }
+      G.lastMult = mult;
+
       // --- Crash -------------------------------------------------------------
       if (agl <= SCORE.CRASH) {
         G.dead = true;
         flight.crash();
+        soundFX.crash();
         // Losing the plane is the story, so lead with the crash. A new personal
         // best is a postscript, not the headline — on a first run the old code
         // showed "NEW BEST" instead of "CRASHED", which reads backwards.
@@ -167,8 +177,11 @@ async function main() {
         setHud('hud-best', `BEST ${isBest ? Math.floor(G.score) : (G.best ?? '—')}`);
         setTimeout(() => location.reload(), 2200);
       } else if (agl < SCORE.NEAR && G.credit > 3) {
+        if (!G.wasClose) soundFX.pickup(); // rising edge: just entered the hot zone
+        G.wasClose = true;
         centerMsg('CLOSE', 'danger', 0); // persistent warning while skimming
       } else {
+        G.wasClose = false;
         hideMsg();
       }
     } else {
