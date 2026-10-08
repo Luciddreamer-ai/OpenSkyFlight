@@ -24,6 +24,8 @@ import {
   wireChrome,
 } from '../../../js/games/GameRuntime.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 const LAT = 57.0472;
 const LON = -135.3619;
@@ -250,41 +252,52 @@ async function main() {
 
       let points = 0;
       const notes = [];
+      const pops = []; // scored events for staggered popups
+      const scored = (label, pts) => { notes.push(label); if (pts > 0) pops.push({ label, pts }); };
       if (sink <= LAND.TOUCHDOWN_SINK) {
         points += 40;
-        notes.push('GREASED IT');
+        scored('GREASED IT', 40);
       } else if (sink <= LAND.MAX_SINK) {
-        points += Math.round(40 * (1 - (sink - LAND.TOUCHDOWN_SINK) / (LAND.MAX_SINK - LAND.TOUCHDOWN_SINK)));
-        notes.push('FIRM');
+        const p = Math.round(40 * (1 - (sink - LAND.TOUCHDOWN_SINK) / (LAND.MAX_SINK - LAND.TOUCHDOWN_SINK)));
+        points += p;
+        scored('FIRM', p);
       } else {
         notes.push('GEAR DAMAGE');
       }
       if (offset <= LAND.PERFECT_R) {
         points += 40;
-        notes.push('BULLSEYE');
+        scored('BULLSEYE', 40);
       } else if (offset <= LAND.CLEARING_R) {
-        points += Math.round(40 * (1 - (offset - LAND.PERFECT_R) / (LAND.CLEARING_R - LAND.PERFECT_R)));
-        notes.push('ON STRIP');
+        const p = Math.round(40 * (1 - (offset - LAND.PERFECT_R) / (LAND.CLEARING_R - LAND.PERFECT_R)));
+        points += p;
+        scored('ON STRIP', p);
       } else {
         notes.push('OFF STRIP');
       }
       if (tilt <= LAND.MAX_TILT) {
         points += 20;
+        pops.push({ label: 'SMOOTH', pts: 20 });
       } else {
         notes.push('WING LOW');
       }
       if (sink >= LAND.ARM_SINK) {
         points += 20;
-        notes.push('SETTLED');
+        scored('SETTLED', 20);
       } else {
         notes.push('FLOATED');
       }
       G.score = points;
       G.result = notes.join(' · ');
+      soundFX.score(points / 120); // 120 = max possible: brighter for better landings
       const isBest = scoreStore.write('bush-pilot', points);
       centerMsg(`${points}\n${G.result}`, isBest && points >= 80 ? 'good' : 'danger');
       setHud('hud-best', `BEST ${isBest ? points : (G.best ?? '—')}`);
       setHud('hud-score', `SCORE ${points}`);
+      // Staggered score-breakdown popups, 0.35s apart.
+      pops.forEach((p, i) => setTimeout(
+        () => showPopup(`+${p.pts} ${p.label}`, '50%', `${30 + i * 7}%`, '#7cfc00'),
+        500 + i * 350
+      ));
       // Show restart button
       const restartBtn = document.getElementById('btn-restart');
       if (restartBtn) {
