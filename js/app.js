@@ -434,7 +434,7 @@ async function initApp() {
     }
   });
 
-  input.onKey('n', (e) => {
+  input.onKey('y', (e) => {
     if (e.shiftKey) {
       if (!benchmarkRunner._lastReport) {
         Logger.warn('App', 'No completed benchmark — run one first before storing baseline');
