@@ -30,7 +30,7 @@ runGame({
   start(ctx) {
     const { scene, terrain, flight } = ctx;
     const ground = terrain.getGroundElevation(0, 0);
-    flight.position.set(0, ground + 2200, 400);
+    flight.position.set(0, ground + 900, 400);
     flight.yaw = 0;
     flight.pitch = 0;
     flight.speed = 52;
@@ -76,7 +76,7 @@ runGame({
     // slow and best near the best-glide speed, which gives a real rhythm to
     // the throttle: push when low, ease off when high.
     const glideEfficiency = 1 - Math.abs(flight.speed - 78) / 150;
-    const sink = 1.2 + throttle * 14 - Math.max(0, glideEfficiency) * 0.9;
+    const sink = 4.5 + throttle * 14 - Math.max(0, glideEfficiency) * 0.9;
     flight.position.y -= sink * dt;
 
     ctx.plane.position.copy(flight.position);
@@ -115,7 +115,11 @@ runGame({
   scoring(ctx) {
     if (ctx.landed) {
       const dist = Math.round(ctx.finalDistance ?? 0);
-      return { score: dist, over: true, text: `LANDED — ${dist} m FROM START` };
+      // Strip landing bonus: land within 120m of the strip for +1500 pts
+      const stripDist = Math.hypot(ctx.flight.position.x - STRIP_X, ctx.flight.position.z - STRIP_Z);
+      const bonus = stripDist <= 120 ? 1500 : 0;
+      const bonusText = bonus > 0 ? ` · ON THE STRIP +${bonus}` : '';
+      return { score: dist + bonus, over: true, text: `LANDED — ${dist} m FROM START${bonusText}` };
     }
     // Live score is distance so far, so the number climbs as you fly.
     return {
