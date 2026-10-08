@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeGate, makeGateTest, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
 
 const GATE_COUNT = 8;
 const TIME_LIMIT = 75;
@@ -53,6 +55,7 @@ runGame({
     ctx.next = 0;
     ctx.timeLeft = TIME_LIMIT;
     ctx.started = false;
+    ctx.clearedShown = false;
 
     COURSE.forEach((c, i) => {
       const ground = terrain.getGroundElevation(c.x, c.z);
@@ -91,6 +94,13 @@ runGame({
       ctx.gates[ctx.next].material.color.setHex(0x00ff88);
       ctx.next++;
       _paint(ctx);
+      showPopup('+100');
+      soundFX.pickup();
+    }
+    if (ctx.next >= ctx.tests.length && !ctx.clearedShown) {
+      ctx.clearedShown = true;
+      showPopup(`TIME BONUS +${Math.round(Math.max(0, ctx.timeLeft) * 10)}`, '50%', '28%', '#7cfc00');
+      soundFX.win();
     }
   },
 
