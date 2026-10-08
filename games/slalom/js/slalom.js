@@ -10,6 +10,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeGate, makeGateTest, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 const GATES = 10;
 const SPACING = 420;
@@ -72,6 +74,8 @@ runGame({
       ctx.gates[ctx.next].material.color.setHex(0x00ff88);
       ctx.next++;
       _paint(ctx);
+      showPopup('+100');
+      soundFX.pickup();
     }
   },
 
