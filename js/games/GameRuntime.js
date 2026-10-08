@@ -19,6 +19,7 @@ import GeoTerrainManager from '../terrain/GeoTerrainManager.js';
 import { detectTileMode } from '../geo/TileUrls.js';
 import Logger from '../utils/Logger.js';
 import { attachDiagnostics, tickDiagnostics } from '../diagnostics/attach.js';
+import { soundFX } from '../audio/SoundFX.js';
 import AtmosphericSky from '../atmosphere/AtmosphericSky.js';
 
 const $ = (id) => document.getElementById(id);
@@ -371,6 +372,14 @@ export function wireChrome({ gameId, best, onPause, onResume }) {
     });
   }
   if (best !== null && best !== undefined) setHud('hud-best', `BEST ${best}`);
+  const muteBtn = $('btn-mute');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      const muted = soundFX.toggleMute();
+      muteBtn.textContent = muted ? '✕' : '♪';
+      if (!muted) soundFX.click();
+    });
+  }
   const back = $('back-link');
   if (back) back.href = '../';
   Logger.info('Game', `chrome wired for ${gameId}`);
