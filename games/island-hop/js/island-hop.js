@@ -11,6 +11,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeBeacon, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 // Real places around Sitka Sound, in a rough loop.
 const STOPS = [
@@ -81,7 +83,12 @@ runGame({
     if (d < 220) {
       ctx.beacons[ctx.next].visible = false;
       ctx.next++;
-      if (ctx.next >= STOPS.length) ctx.finished = true;
+      showPopup('+100');
+      soundFX.pickup();
+      if (ctx.next >= STOPS.length) {
+        ctx.finished = true;
+        soundFX.win();
+      }
       else {
         ctx.beacons[ctx.next].visible = true;
         ctx.msg = STOPS[ctx.next].name.toUpperCase();
