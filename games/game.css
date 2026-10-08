@@ -155,6 +155,9 @@ body {
 #center-msg.good {
   color: #00ff88;
 }
+#center-msg.hot {
+  color: #ff9f43;
+}
 
 /* Touch controls */
 #stick-zone {
