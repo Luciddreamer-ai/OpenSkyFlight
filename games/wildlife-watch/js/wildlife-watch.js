@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 const SPECIES = [
   { name: 'Bald Eagle', x: 900, z: -1200 },
@@ -166,6 +168,8 @@ function _identify(ctx, mesh) {
   ctx.found++;
   ctx.msg = mesh.userData.name.toUpperCase();
   ctx.msgUntil = ctx.t + 2.2;
+  showPopup(`+100 · ${mesh.userData.name.toUpperCase()}`, '50%', '35%', '#7cfc00');
+  soundFX.pickup();
   _log(ctx);
 }
 
