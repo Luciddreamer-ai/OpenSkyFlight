@@ -10,6 +10,8 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeGroundMark, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
 
 const STRIP_Z = -2600;
 const STRIP_X = 2600;
@@ -89,6 +91,8 @@ runGame({
       ctx.landed = true;
       const travelled = Math.hypot(flight.position.x - ctx.startX, flight.position.z - ctx.startZ);
       ctx.finalDistance = travelled;
+      showPopup(`${Math.round(travelled)} m FLOWN`, '50%', '35%', '#7cfc00');
+      soundFX.win();
     }
   },
 
