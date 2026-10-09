@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0a1628" />
+<title>Sitka Skies — Games</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #0a1628 0%, #0d1f3c 50%, #0a1628 100%);
+    color: #fff;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+  header h1 {
+    font-size: 2.5em;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #7df9ff, #ff6bd6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header p {
+    color: #8aa0c0;
+    margin-top: 8px;
+    font-size: 1.1em;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .card:hover, .card:active {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(125,249,255,0.2);
+  }
+  .card-img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #111;
+    object-fit: cover;
+    display: block;
+  }
+  .card-body { padding: 16px; }
+  .card-title {
+    font-size: 1.3em;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .card-tagline {
+    color: var(--accent, #7df9ff);
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .card-desc {
+    color: #a0b4cc;
+    font-size: 0.95em;
+    line-height: 1.5;
+  }
+  .card-play {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 20px;
+    background: var(--accent, #7df9ff);
+    color: #0a1628;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9em;
+  }
+  .section-title {
+    max-width: 1200px;
+    margin: 30px auto 0;
+    padding: 0 20px;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #7df9ff;
+  }
+  footer {
+    text-align: center;
+    color: #5a708c;
+    padding: 40px 20px;
+    font-size: 0.9em;
+  }
+  footer a { color: #7df9ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛩️ Sitka Skies</h1>
+  <p>Fly the real skies over Sitka, Alaska — right from your browser</p>
+</header>
+
+<div class="section-title">✈️ Free Flight</div>
+<div class="grid">
+  <a class="card" href="./" style="--accent:#7df9ff">
+    <div class="card-body">
+      <div class="card-title">Sitka Skies — Free Flight</div>
+      <div class="card-tagline">Take off from Sitka</div>
+      <div class="card-desc">The main event. Fly anywhere over real terrain — Sitka Sound, Mount Edgecumbe, the whole archipelago. 8 planes including the B-17 bomber.</div>
+      <span class="card-play">▶ Fly Now</span>
+    </div>
+  </a>
+  <a class="card" href="helicopter/" style="--accent:#ffb347">
+    <div class="card-body">
+      <div class="card-title">🚁 Jayhawk Rescue</div>
+      <div class="card-tagline">Hover and save them</div>
+      <div class="card-desc">Distress calls over Sitka Sound. Fly the Coast Guard helicopter out, hold a steady hover in the rescue zone for 8 seconds.</div>
+      <span class="card-play">▶ Play</span>
+    </div>
+  </a>
+</div>
+
+<div class="section-title">🎮 Mini Games</div>
+<div class="grid" id="games-grid">
+  <!-- Populated by JS -->
+</div>
+
+<footer>
+  Built with Three.js · Real terrain · iPad-first<br/>
+  <a href="https://github.com/Lucineer/OpenSkyFlight">GitHub</a>
+</footer>
+
+<script type="module">
+import { GAMES } from './js/games/games.js';
+const grid = document.getElementById('games-grid');
+// Add paper-plane (may not be in catalogue yet)
+const allGames = [...GAMES];
+if (!allGames.find(g => g.id === 'paper-plane')) {
+  allGames.push({
+    id: 'paper-plane',
+    name: 'Paper Plane Post',
+    tagline: 'Deliver the letter before sunset',
+    blurb: 'Pilot a paper airplane through city windows. Slip the letter through the candle-lit window before the sun goes down.',
+    href: 'games/paper-plane/',
+    accent: '#ff9f43',
+  });
+}
+for (const g of allGames) {
+  if (g.id === 'jayhawk-rescue') continue; // already featured above
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = g.href.startsWith('games/') ? g.href : 'games/' + g.href;
+  a.style.setProperty('--accent', g.accent || '#7df9ff');
+  // Screenshot if available, else gradient placeholder
+  const imgSrc = `assets/screenshots/${g.id}.jpg`;
+  a.innerHTML = `
+    <img class="card-img" src="${imgSrc}" alt="${g.name}" loading="lazy"
+         onerror="this.style.display='none'" />
+    <div class="card-body">
+      <div class="card-title">${g.icon || '🎮'} ${g.name}</div>
+      <div class="card-tagline">${g.tagline || ''}</div>
+      <div class="card-desc">${g.blurb || ''}</div>
+      <span class="card-play">▶ Play</span>
+    </div>`;
+  grid.appendChild(a);
+}
+</script>
+</body>
+</html>
