@@ -22,6 +22,8 @@ import Minimap from './ui/Minimap.js';
 import Logger from './utils/Logger.js';
 import { showNotification } from './ui/Notification.js';
 import AtmosphericSky from './atmosphere/AtmosphericSky.js';
+import { createSky } from './scene/SkyShader.js';
+import { createCloudLayer as createPuffClouds } from './scene/CloudLayer.js';
 import CloudLayer from './atmosphere/CloudLayer.js';
 import BenchmarkRunner from './benchmark/BenchmarkRunner.js';
 import { attachDiagnostics, tickDiagnostics } from './diagnostics/attach.js';
@@ -68,9 +70,20 @@ async function initApp() {
 
   // --- Atmosphere ---
   // Side-effect: registers itself with scene, dirLight, and ambientLight
-  new AtmosphericSky(scene, dirLight, ambientLight);
+  const useProceduralSky = new URLSearchParams(window.location.search).get('sky') === 'procedural';
+  let skyController = null;
+  if (useProceduralSky) {
+    // Procedural sky with time-of-day (opt-in via ?sky=procedural)
+    skyController = createSky({ dirLight, ambientLight, hour: 10 });
+    scene.add(skyController);
+  } else {
+    new AtmosphericSky(scene, dirLight, ambientLight);
+  }
   const cloudLayer = new CloudLayer(scene);
   cloudLayer.mesh.renderOrder = CLOUD_RENDER_ORDER;
+  // Puff clouds: fly-through billboard layer (complements the flat TSL layer above)
+  const puffClouds = createPuffClouds();
+  scene.add(puffClouds);
 
   // --- Terrain ---
   // Resolve tile serving mode first: local caching proxy vs direct upstream
@@ -241,6 +254,11 @@ async function initApp() {
     CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
     flightController.agility = selectedPlaneDef.agility || 1;
     Logger.info('App', `Flying ${selectedPlaneDef.name}`);
+    // Show BOMB button for bomber aircraft (touch controls)
+    const bombBtn = document.getElementById('tc-bomb');
+    if (bombBtn) {
+      bombBtn.style.display = selectedPlaneDef.bomber ? '' : 'none';
+    }
   } catch (err) {
     Logger.warn('App', 'Failed to load plane: ' + err.message);
   }
@@ -451,7 +469,7 @@ async function initApp() {
     }
   });
 
-  input.onKey('b', (e) => {
+  input.onKey('y', (e) => {
     if (e.shiftKey) {
       if (!benchmarkRunner._lastReport) {
         Logger.warn('App', 'No completed benchmark — run one first before storing baseline');
@@ -515,18 +533,18 @@ async function initApp() {
         Logger.info('App', 'Takeoff intro skipped by player input');
       } else {
         const elapsed = (performance.now() - takeoffT) / 1000; // seconds since intro start
-        // Phase 1 (0-12s): throttle 0 -> 0.35 (takeoff roll, ~840 m/s max)
-        const thrPhase = Math.min(elapsed / 12, 1);
-        flightController.throttle = 0.35 * thrPhase;
+        // Phase 1 (0-20s): throttle 0 -> 0.25 (gentle takeoff roll, lets terrain load and player orient)
+        const thrPhase = Math.min(elapsed / 20, 1);
+        flightController.throttle = 0.25 * thrPhase;
         _introLastThrottle = flightController.throttle;
         if (touchControls) touchControls.syncThrottleUI();
-        // Phase 2 (8-20s): pitch 0 -> 0.12 rad (rotate and climb out)
-        if (elapsed > 8) {
-          const pitchPhase = Math.min((elapsed - 8) / 12, 1);
+        // Phase 2 (12-28s): pitch 0 -> 0.12 rad (rotate and climb out)
+        if (elapsed > 12) {
+          const pitchPhase = Math.min((elapsed - 12) / 16, 1);
           flightController.setOrientation(flightController.yaw, 0.12 * pitchPhase);
         }
-        // End after 22s — normal flight resumes
-        if (elapsed > 22) {
+        // End after 30s — normal flight resumes
+        if (elapsed > 30) {
           takeoffT = -1;
           Logger.info('App', 'Takeoff intro complete');
         }
@@ -656,6 +674,9 @@ async function initApp() {
 
     // --- Environment phase ---
     cloudLayer.update(dt, camera.position, aircraftState ? aircraftState.pitch : 0);
+    // Puff clouds drift + sky follows camera
+    if (puffClouds && puffClouds.update) puffClouds.update(dt, camera.position);
+    if (skyController && skyController.update) skyController.update(camera.position);
 
     const timer = benchmarkRunner.getSubsystemTimer();
 

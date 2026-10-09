@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0a1628" />
+<title>Sitka Flight Simulator</title>
+<link rel="stylesheet" href="css/sim.css" />
+<style>
+  /* Phase 1 placeholder sky — replaced by procedural sky shader in Phase 2 */
+  #sim-root {
+    background: linear-gradient(180deg, #1a3a5c 0%, #2a5a8c 40%, #7ab0d0 75%, #c0d8e8 100%);
+  }
+  #sim-root::after {
+    content: '🛩️ Phase 1 — Checklist prototype\A3D scene arrives in Phase 2';
+    white-space: pre;
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; color: rgba(255,255,255,0.5); font-size: 1.1em; line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+<div id="sim-root"></div>
+<div id="ui-root"></div>
+
+<div id="hud">
+  <button id="checklist-btn" class="hud-btn" aria-label="Checklist">☰</button>
+  <div></div>
+</div>
+<div id="phase-banner">Loading…</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
