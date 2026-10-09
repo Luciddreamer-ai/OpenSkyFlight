@@ -13,7 +13,7 @@ import { soundFX } from '../../../js/audio/SoundFX.js';
 import { showPopup } from '../../../js/ui/ScorePopups.js';
 
 const GATE_COUNT = 8;
-const TIME_LIMIT = 75;
+const TIME_LIMIT = 105;
 
 // A ring course laid out as a rough figure-of-eight over the sound, so the
 // player has to turn rather than just hold one heading.
@@ -44,7 +44,7 @@ runGame({
     flight.yaw = 0;
     flight.pitch = 0;
     flight.speed = 60;
-    ctx.input.throttle = 0.45;
+    ctx.input.throttle = 0.6;
 
     const { group } = buildPlane('rafale');
     scene.add(group);

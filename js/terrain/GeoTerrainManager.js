@@ -4,6 +4,7 @@ import { TileMap, TileSource, applyTerrariumElevation } from 'three-tile';
 import { CONFIG, onChange } from '../utils/config.js';
 import ElevationProvider from '../geo/ElevationProvider.js';
 import { tileTemplate } from '../geo/TileUrls.js';
+import OceanSurface from './OceanSurface.js';
 
 // Web Mercator constants (WGS84)
 const EARTH_RAD = 6378137;
@@ -132,6 +133,11 @@ export default class GeoTerrainManager {
 
     this.scene.add(this.tileMap);
 
+    // Animated ocean surface — drop-in: every consumer of GeoTerrainManager
+    // (main game, helicopter game, all mini-games) gets it automatically.
+    if (this.ocean) this.ocean.dispose();
+    this.ocean = new OceanSurface(this.scene, this);
+
     this._wireframedMeshes = new WeakSet();
     if (this._wireframeMode) this._enforceWireframe();
 
@@ -177,7 +183,7 @@ export default class GeoTerrainManager {
     }
   }
 
-  update(_cameraPosition) {
+  update(cameraPosition) {
     if (!this.tileMap) return;
 
     // Transition: remove old terrain once new one has visible tiles
@@ -187,6 +193,9 @@ export default class GeoTerrainManager {
     }
 
     if (this._wireframeMode) this._enforceWireframe();
+
+    // Animated ocean (hidden automatically in synthetic/debug texture modes)
+    if (this.ocean && cameraPosition) this.ocean.update(cameraPosition, this._wireframeMode);
   }
 
   _hasVisibleTiles(tileMap) {
@@ -443,6 +452,10 @@ export default class GeoTerrainManager {
   }
 
   dispose() {
+    if (this.ocean) {
+      this.ocean.dispose();
+      this.ocean = null;
+    }
     if (this._oldTileMap) {
       this._disposeTileMap(this._oldTileMap);
       this._oldTileMap = null;

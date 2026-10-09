@@ -135,6 +135,9 @@ function buildDom(spec) {
  * @param {(w:object)=>void} spec.start   build the world, return cleanup
  * @param {(dt:number,w:object,t:number)=>void} spec.update
  * @param {(w:object)=>void} [spec.render]
+ * @param {(w:object,dt:number)=>void} [spec.postCamera]  runs after the chase
+ *        camera each frame; a game can re-aim the camera here (e.g. to track
+ *        a falling object) without fighting the chase logic.
  * @param {(w:object)=>({score:number,over:boolean,text?:string})} [spec.scoring]
  *        returns the current score and whether the run has ended
  * @param {(w:object, result:object)=>void} [spec.onEnd]
@@ -314,6 +317,8 @@ export async function runGame(spec) {
 
     spec.render?.(ctx);
     chaseCamera(camera, flight, dt, spec.camera);
+    spec.postCamera?.(ctx, dt);
+    terrain.update(camera.position);
     renderer.render(scene, camera);
 
     if (!ctx.over && bootOverlay && !bootOverlay.classList.contains('hidden')) {

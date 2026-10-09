@@ -17,6 +17,11 @@ const DROP_ZONE = { x: 1500, z: -3400, radius: 90 };
 const RELEASE_ALTITUDE = 320; // above the zone's ground: the best score window
 const MAX_ALTITUDE = 1600;
 
+// Scratch objects for the pod-tracking camera so the frame loop allocates nothing.
+const _trackM = new THREE.Matrix4();
+const _trackQ = new THREE.Quaternion();
+const _trackUp = new THREE.Vector3(0, 1, 0);
+
 runGame({
   id: 'cargo-drop',
   name: 'CARGO DROP',
@@ -24,6 +29,14 @@ runGame({
   tagline: 'Collect the load, then release it into the zone',
   bar: { label: 'CARGO' },
   camera: { distance: 42, height: 14 },
+  extra: `<button id="btn-drop" type="button" title="Release the load (Space)" style="
+      position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom));
+      transform: translateX(-50%); z-index: 15; display: none;
+      min-width: 132px; min-height: 64px; padding: 14px 28px;
+      background: rgba(60, 38, 2, 0.85); color: #ffd24d;
+      border: 2px solid #ffd24d; border-radius: 14px;
+      font-family: var(--mono); font-size: 17px; font-weight: 700; letter-spacing: 3px;
+      cursor: pointer; touch-action: manipulation;">DROP</button>`,
 
   start(ctx) {
     const { scene, terrain, flight } = ctx;
@@ -47,7 +60,8 @@ runGame({
     scene.add(pk);
     ctx.pickup = pk;
 
-    // Drop zone, laid on the terrain under it
+    // Drop zone, laid on the terrain under it, plus a tall beacon pillar so the
+    // zone is visible from release altitude (the pickup gets one too).
     const dzGround = terrain.getGroundElevation(DROP_ZONE.x, DROP_ZONE.z);
     const zone = makeGroundMark({
       position: new THREE.Vector3(DROP_ZONE.x, dzGround, DROP_ZONE.z),
@@ -57,6 +71,13 @@ runGame({
     scene.add(zone);
     ctx.zone = zone;
     ctx.zoneGround = dzGround;
+    const dzBeacon = makeBeacon({
+      position: new THREE.Vector3(DROP_ZONE.x, dzGround + 40, DROP_ZONE.z),
+      height: 260,
+      color: 0x00ff88,
+    });
+    scene.add(dzBeacon);
+    ctx.zoneBeacon = dzBeacon;
 
     // The pod itself: a small mesh that rides with the plane until released.
     const pod = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), new THREE.MeshBasicMaterial({ color: 0xffd93d }));
@@ -67,11 +88,26 @@ runGame({
     ctx.phase = 'to-pickup';
     ctx.dropped = null;
     ctx.result = 0;
+    // Pod-tracking camera blend and input edge state (reset every run).
+    ctx.trackPod = 0;
+    ctx.impactT = -10;
+    ctx._spaceWasDown = false;
+    // Wire the DROP button. Property assignment is idempotent across restarts.
+    const dropBtn = document.getElementById('btn-drop');
+    if (dropBtn) {
+      dropBtn.style.display = 'none';
+      dropBtn.onclick = () => {
+        if (ctx.phase === 'to-drop') _release(ctx);
+      };
+    }
     return () => {
       disposeTree(ctx.plane);
       disposeTree(ctx.pickup);
       disposeTree(ctx.zone);
+      disposeTree(ctx.zoneBeacon);
       disposeTree(ctx.pod);
+      const b = document.getElementById('btn-drop');
+      if (b) b.style.display = 'none';
     };
   },
 
@@ -94,16 +130,18 @@ runGame({
         ctx.phase = 'to-drop';
         ctx.pod.visible = true;
         ctx.pickup.visible = false;
-        ctx.msg = 'LOAD SECURED — HEAD FOR THE ZONE';
+        ctx.msg = 'LOAD SECURED — DROP WITH THE BUTTON OR SPACE';
         ctx.msgUntil = ctx.t + 2.5;
         soundFX.pickup();
       }
     } else if (ctx.phase === 'to-drop') {
       ctx.pod.position.copy(flight.position);
       ctx.pod.position.y -= 6;
-      // Release: press the stick fully forward, or the S key.
-      const s = input.sample();
-      if (s.pitch > 0.9 || input.keys.KeyS) _release(ctx);
+      // Release: the on-screen DROP button (touch) or the Space key (desktop).
+      // Edge-detected so holding Space during pickup can't auto-release.
+      const spaceDown = !!input.keys.Space;
+      if (spaceDown && !ctx._spaceWasDown) _release(ctx);
+      ctx._spaceWasDown = spaceDown;
     } else if (ctx.phase === 'falling' && ctx.dropped) {
       // Ballistic fall, integrated explicitly so it is frame-rate independent.
       const g = terrain.getGroundElevation(ctx.dropped.x, ctx.dropped.z);
@@ -114,6 +152,7 @@ runGame({
       ctx.pod.position.copy(ctx.dropped);
       if (ctx.dropped.y <= g + 2) {
         ctx.pod.position.y = g + 2;
+        ctx.impactT = ctx.t; // the tracking camera holds on the pod a beat longer
         const miss = Math.hypot(ctx.dropped.x - DROP_ZONE.x, ctx.dropped.z - DROP_ZONE.z);
         ctx.result = _score(ctx, miss);
         ctx.phase = 'done';
@@ -136,6 +175,9 @@ runGame({
         ctx.phase === 'to-pickup'
           ? `${Math.round(ctx.range ?? 0)} m to load`
           : `${Math.round(ctx.range ?? 0)} m to zone`;
+    // The DROP button only exists while there is something to drop.
+    const dropBtn = document.getElementById('btn-drop');
+    if (dropBtn) dropBtn.style.display = ctx.phase === 'to-drop' ? 'block' : 'none';
   },
 
   scoring(ctx) {
@@ -143,6 +185,23 @@ runGame({
       return { score: ctx.result, over: true, text: `DELIVERED — ${ctx.result}` };
     }
     return { score: 0, over: false };
+  },
+
+  // Runs in the shell after the chase camera. While the pod is falling — and
+  // for a beat after impact — swing the camera to watch it instead of staring
+  // at the back of the plane. The blend ramps so the cut is never jarring.
+  postCamera(ctx, dt) {
+    let target = 0;
+    if (ctx.phase === 'falling') target = 1;
+    else if (ctx.phase === 'done' && ctx.t - ctx.impactT < 1.4) target = 1;
+    const prev = ctx.trackPod ?? 0;
+    const blend = prev + (target - prev) * Math.min(1, dt * 3);
+    ctx.trackPod = blend;
+    if (blend > 0.02 && ctx.pod && ctx.pod.visible) {
+      _trackM.lookAt(ctx.camera.position, ctx.pod.position, _trackUp);
+      _trackQ.setFromRotationMatrix(_trackM);
+      ctx.camera.quaternion.slerp(_trackQ, Math.min(1, blend));
+    }
   },
 });
 

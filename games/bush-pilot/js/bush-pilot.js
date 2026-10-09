@@ -24,6 +24,7 @@ import {
   wireChrome,
 } from '../../../js/games/GameRuntime.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { makeBeacon } from '../../../js/games/marks.js';
 import { showPopup } from '../../../js/ui/ScorePopups.js';
 import { soundFX } from '../../../js/audio/SoundFX.js';
 
@@ -220,6 +221,16 @@ async function main() {
   ring.position.set(aim.x, aim.y + 1.5, aim.z);
   scene.add(ring);
 
+  // A vertical beacon pillar at the aim point — the flat ring is edge-on and
+  // near-invisible at 700m on approach, so the pillar marks the spot from far.
+  const beacon = makeBeacon({
+    position: new THREE.Vector3(aim.x, aim.y, aim.z),
+    height: 260,
+    radius: 10,
+    color: 0x00ff88,
+  });
+  scene.add(beacon);
+
   let last = performance.now();
   let prevY = flight.position.y;
 
@@ -338,6 +349,7 @@ async function main() {
     if (G.armed && G.agl < 60) centerMsg('FLARE', 'danger', 0);
     else hideMsg();
 
+    terrain.update(camera.position);
     renderer.render(scene, camera);
   }
 

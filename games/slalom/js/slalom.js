@@ -85,7 +85,9 @@ runGame({
     if (ctx.next < ctx.tests.length) {
       const dist = ctx.tests[ctx.next].distance(ctx.flight.position);
       if (bar) bar.style.width = `${Math.max(0, 100 - Math.min(100, dist / 3))}%`;
-      if (d) d.textContent = `GATE ${ctx.next + 1}/${ctx.tests.length} · ${Math.round(dist)} m`;
+      // Direction indicator: gates alternate right (even) / left (odd)
+      const dir = ctx.next % 2 === 0 ? '▶' : '◀';
+      if (d) d.textContent = `GATE ${ctx.next + 1}/${ctx.tests.length} ${dir} · ${Math.round(dist)} m`;
     } else if (bar) bar.style.width = '100%';
   },
 

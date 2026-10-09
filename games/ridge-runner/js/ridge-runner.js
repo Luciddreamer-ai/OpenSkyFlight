@@ -104,15 +104,21 @@ async function main() {
   setHud('hud-best', G.best === null || G.best === undefined ? 'BEST —' : `BEST ${G.best}`);
 
   // --- Ground sampling -------------------------------------------------------
-  // Sample the ground under the plane and slightly ahead, so we react to a
-  // rising ridge instead of flying into the side of it.
-  const probeOffsets = [0, -60, -120];
+  // Sample the ground under the plane and ahead of it, so we react to a
+  // rising ridge instead of flying into the side of it. The lookahead
+  // distances are rotated by flight.yaw: probes must sample ahead of the
+  // plane's nose, not ahead in world -z (which would sample off to the side
+  // after any turn). With yaw = 0, forward is -z; in general it is
+  // (-sin(yaw), -cos(yaw)) in the x/z plane.
+  const probeOffsets = [0, 60, 120]; // metres ahead of the nose along forward
 
   function groundClearance() {
     let lowest = Infinity;
-    for (const dz of probeOffsets) {
-      const x = flight.position.x;
-      const z = flight.position.z + dz;
+    const s = Math.sin(flight.yaw);
+    const c = Math.cos(flight.yaw);
+    for (const d of probeOffsets) {
+      const x = flight.position.x - s * d;
+      const z = flight.position.z - c * d;
       const g = terrain.getGroundElevation(x, z);
       if (g < lowest) lowest = g;
     }
@@ -159,6 +165,7 @@ async function main() {
       const mult = Math.floor(G.credit);
       if (mult > (G.lastMult ?? 1) && mult >= 2) {
         showPopup(`×${mult} MULTIPLIER`, '50%', '30%', '#ff9f43');
+        soundFX.pickup(); // celebrate the milestone audibly, not just visually
       }
       G.lastMult = mult;
 
@@ -179,7 +186,7 @@ async function main() {
       } else if (agl < SCORE.NEAR && G.credit > 3) {
         if (!G.wasClose) soundFX.pickup(); // rising edge: just entered the hot zone
         G.wasClose = true;
-        centerMsg('CLOSE', 'danger', 0); // persistent warning while skimming
+        centerMsg('CLOSE', 'hot', 0); // accent warning while skimming (not red: this is the money zone, not a danger)
       } else {
         G.wasClose = false;
         hideMsg();
@@ -213,6 +220,7 @@ async function main() {
     const fill = $('throttle-fill');
     if (fill) fill.style.height = `${G.speed01 * 100}%`;
 
+    terrain.update(camera.position);
     renderer.render(scene, camera);
   }
 
