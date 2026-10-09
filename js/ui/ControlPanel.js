@@ -35,10 +35,17 @@ export default class ControlPanel {
     const hint = document.getElementById('qualityHint');
     if (!sel) return;
 
-    // Reflect whatever the URL already asked for.
+    // Reflect whatever the URL already asked for, then fall back to the
+    // shared preference the games write. Without this the sim and the nine
+    // games keep separate quality settings, which is the opposite of the
+    // point of having one preference.
     try {
       const forced = new URLSearchParams(location.search).get('quality');
       if (forced) sel.value = forced;
+      else {
+        const stored = localStorage.getItem('osf.quality');
+        if (stored) sel.value = stored;
+      }
     } catch {
       /* non-browser */
     }
@@ -62,6 +69,14 @@ export default class ControlPanel {
         const url = new URL(location.href);
         if (v === 'auto') url.searchParams.delete('quality');
         else url.searchParams.set('quality', v);
+        // Persist to the key the games read, so one choice covers the sim and
+        // all nine game pages instead of having to be repeated per page.
+        try {
+          if (v === 'auto') localStorage.removeItem('osf.quality');
+          else localStorage.setItem('osf.quality', v);
+        } catch {
+          /* private mode */
+        }
         // Two knobs change at boot only (antialias + tile LOD), so a reload is
         // the honest way to apply a preset. Say so instead of silently doing
         // half of it.

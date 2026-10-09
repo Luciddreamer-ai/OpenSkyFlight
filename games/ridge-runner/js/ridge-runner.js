@@ -26,6 +26,7 @@ import {
   wireChrome,
 } from '../../../js/games/GameRuntime.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { mountGraphicsControl, applyStoredQualityOverride } from '../../../js/games/GraphicsControl.js';
 
 // Sitka's Kruzof Island / Mount Edgecumbe area: dramatic, real ridgelines.
 const LAT = 57.0472;
@@ -45,6 +46,10 @@ const SPEED = { start: 0.42, max: 0.95, perSecond: 0.012 };
 const $ = (id) => document.getElementById(id);
 
 async function main() {
+  // A quality chosen in another game or in the sim has to become an
+  // explicit ?quality= before the probe runs, or it is inert.
+  applyStoredQualityOverride();
+
   const world = await bootWorld({ lat: LAT, lon: LON, altitude: 1400 });
   const { renderer, scene, camera, terrain, input, flight, telemetry } = world;
 
@@ -204,6 +209,7 @@ async function main() {
   }
 
   requestAnimationFrame(frame);
+  mountGraphicsControl(document.getElementById('top-right'));
 }
 
 main().catch((err) => {

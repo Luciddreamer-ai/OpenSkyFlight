@@ -1,76 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#000000" />
-  <title>Games — Sitka Skies</title>
-  <link rel="icon" type="image/png" href="../assets/favicon.png" />
-  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png" />
-  <link rel="manifest" href="../manifest.webmanifest" />
-  <link rel="stylesheet" href="games.css" />
-</head>
-<body>
-  <header id="topbar">
-    <a id="back-link" href="../" aria-label="Back to free flight">&#8592; FLY</a>
-    <h1>GAMES</h1>
-    <span id="tier-badge"></span>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#000000" />
+    <title>Games — Sitka Skies</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png" />
+    <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png" />
+    <link rel="manifest" href="../manifest.webmanifest" />
+    <link rel="stylesheet" href="games.css" />
+  </head>
+  <body>
+    <header id="topbar">
+      <a id="back-link" href="../" aria-label="Back to free flight">&#8592; FLY</a>
+      <h1>GAMES</h1>
+      <span id="tier-badge"></span>
+    </header>
 
-  <main id="grid-wrap">
-    <!-- Free Fly is deliberately the first, largest card: a player who
+    <main id="grid-wrap">
+      <!-- Free Fly is deliberately the first, largest card: a player who
          wandered into the toy box must always be one tap from just flying. -->
-    <section id="featured" aria-label="Free flight"></section>
-    <section id="grid" aria-label="Mini games"></section>
-  </main>
+      <section id="featured" aria-label="Free flight"></section>
+      <section id="grid" aria-label="Mini games"></section>
+    </main>
 
-  <footer id="hint">
-    Tap a game to play &middot; each one is a standalone page over the real terrain engine
-  </footer>
+    <footer id="hint">Tap a game to play &middot; each one is a standalone page over the real terrain engine</footer>
 
-  <script type="module">
-    import { GAMES, FREE_FLY } from '../js/games/games.js';
+    <script type="module">
+      import { GAMES, FREE_FLY } from '../js/games/games.js';
 
-    const featured = document.getElementById('featured');
-    const grid = document.getElementById('grid');
-    const tierBadge = document.getElementById('tier-badge');
+      const featured = document.getElementById('featured');
+      const grid = document.getElementById('grid');
+      const tierBadge = document.getElementById('tier-badge');
 
-    function card(g, big = false) {
-      const a = document.createElement('a');
-      a.className = 'card' + (big ? ' card-big' : '') + (g.comingSoon ? ' card-locked' : '');
-      a.href = g.comingSoon ? '#' : g.href;
-      a.style.setProperty('--accent', g.accent || '#7df9ff');
-      if (g.comingSoon) {
-        a.setAttribute('aria-disabled', 'true');
-        a.addEventListener('click', (e) => e.preventDefault());
-      }
-      a.innerHTML = `
+      function card(g, big = false) {
+        const a = document.createElement('a');
+        a.className = 'card' + (big ? ' card-big' : '') + (g.comingSoon ? ' card-locked' : '');
+        a.href = g.comingSoon ? '#' : g.href;
+        a.style.setProperty('--accent', g.accent || '#7df9ff');
+        if (g.comingSoon) {
+          a.setAttribute('aria-disabled', 'true');
+          a.addEventListener('click', (e) => e.preventDefault());
+        }
+        a.innerHTML = `
         <div class="card-icon">${g.icon}</div>
         <div class="card-body">
           <div class="card-name">${g.name}${g.comingSoon ? ' <span class="soon">SOON</span>' : ''}</div>
           <div class="card-tag">${g.tagline}</div>
           <div class="card-blurb">${g.blurb}</div>
-          <div class="card-skills">${(g.skills || []).map(s => `<span>${s}</span>`).join('')}</div>
+          <div class="card-skills">${(g.skills || []).map((s) => `<span>${s}</span>`).join('')}</div>
           <div class="card-control">${g.control || ''}</div>
         </div>`;
-      return a;
-    }
+        return a;
+      }
 
-    featured.appendChild(card(FREE_FLY, true));
-    for (const g of GAMES) grid.appendChild(card(g));
+      featured.appendChild(card(FREE_FLY, true));
+      for (const g of GAMES) grid.appendChild(card(g));
 
-    const count = GAMES.filter(g => !g.comingSoon).length;
-    document.getElementById('hint').textContent =
-      `${count} playable · tap a game to start · each is a standalone page over the real terrain engine`;
+      const count = GAMES.filter((g) => !g.comingSoon).length;
+      document.getElementById('hint').textContent =
+        `${count} playable · tap a game to start · each is a standalone page over the real terrain engine`;
 
-    // Same capability tier the sim itself detected, so a device that plays
-    // poorly in the sim knows the games are running at the same budget.
-    try {
-      const t = localStorage.getItem('osf.tier');
-      if (t) tierBadge.textContent = t.toUpperCase();
-    } catch {}
-  </script>
-</body>
+      // Same capability tier the sim itself detected, so a device that plays
+      // poorly in the sim knows the games are running at the same budget.
+      try {
+        const t = localStorage.getItem('osf.tier');
+        if (t) tierBadge.textContent = t.toUpperCase();
+      } catch {}
+    </script>
+  </body>
 </html>

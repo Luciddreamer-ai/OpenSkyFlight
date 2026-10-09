@@ -38,6 +38,7 @@ import {
   tickTelemetry,
 } from './GameRuntime.js';
 import Logger from '../utils/Logger.js';
+import { mountGraphicsControl, applyStoredQualityOverride } from './GraphicsControl.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -64,6 +65,7 @@ function buildDom(spec) {
     <div id="hud-top">
       <span id="hud-score">SCORE 0</span>
       ${hud.map((h) => `<span id="${h.id}">${h.initial ?? ''}</span>`).join('\n      ')}
+      <span id="hud-tier" title="Detected graphics tier"></span>
       <span id="hud-best"></span>
     </div>
     ${spec.showAlt === false ? '' : '<div id="hud-alt"><span id="hud-agl">AGL —</span></div>'}
@@ -83,6 +85,7 @@ function buildDom(spec) {
     <div id="top-right">
       <button id="btn-pause" type="button" aria-label="Pause">II</button>
     </div>
+    <div id="top-left-gfx"></div>
     <a id="back-link" href="../" aria-label="Back to games">&#8592;</a>
     <button id="btn-restart" type="button" aria-label="Restart" hidden>R</button>
 
@@ -139,6 +142,11 @@ function buildDom(spec) {
  */
 export async function runGame(spec) {
   buildDom(spec);
+
+  // A preference chosen in any other game, or in the sim, has to become a
+  // visible ?quality= before the probe runs — otherwise it sits in
+  // localStorage doing nothing and the player thinks the setting is broken.
+  applyStoredQualityOverride();
 
   const world = await bootWorld({ lat: spec.lat ?? 57.0472, lon: spec.lon ?? -135.3619 });
   const { renderer, scene, camera, terrain, input, flight, telemetry } = world;
@@ -311,6 +319,14 @@ export async function runGame(spec) {
     if (!ctx.over && bootOverlay && !bootOverlay.classList.contains('hidden')) {
       bootOverlay.classList.add('hidden');
     }
+  }
+
+  // Mounted after boot so the hint can show the tier that was actually
+  // detected rather than whatever the probe would say a second time.
+  mountGraphicsControl($('top-left-gfx'));
+  if (spec.hud?.length === 0 || !spec.hud) {
+    const tier = window.__osfCapabilityTier;
+    if (tier && $('hud-tier')) $('hud-tier').textContent = tier.toUpperCase();
   }
 
   Logger.info('Shell', `game ${spec.id} booted`);

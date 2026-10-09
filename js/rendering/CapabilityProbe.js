@@ -269,6 +269,29 @@ export function qualityToTier(quality) {
   }
 }
 
+/** Inverse of qualityToTier: the canonical user-facing name for a tier. */
+export function tierToQuality(tier) {
+  switch (tier) {
+    case TIER.POTATO:
+      return 'low';
+    case TIER.BALANCED:
+      return 'medium';
+    case TIER.PERFORMANCE:
+      return 'high';
+    default:
+      return 'auto';
+  }
+}
+
+/**
+ * The budget for a tier, tolerating a null tier (which means "auto").
+ * Exposed so a settings UI can show the numbers the probe is working to
+ * instead of asking the user to trust a word like "balanced".
+ */
+export function getBudget(tier) {
+  return TIER_BUDGETS[tier] ?? TIER_BUDGETS[TIER.BALANCED];
+}
+
 /** Read ?quality= / ?tier= from the URL, validated against known tiers. */
 function readOverride() {
   try {

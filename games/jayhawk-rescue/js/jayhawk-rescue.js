@@ -8,6 +8,7 @@ import { detectTileMode } from '../../../js/geo/TileUrls.js';
 import { CONFIG } from '../../../js/utils/config.js';
 import { attachDiagnostics, tickDiagnostics } from '../../../js/diagnostics/attach.js';
 import AtmosphericSky from '../../../js/atmosphere/AtmosphericSky.js';
+import { mountGraphicsControl, applyStoredQualityOverride } from '../../../js/games/GraphicsControl.js';
 
 const SITKA_LAT = 57.0472,
   SITKA_LON = -135.3619;
@@ -329,6 +330,10 @@ function setupKeys() {
 
 // ---------- init ----------
 async function init() {
+  // A quality chosen in another game or in the sim has to become an
+  // explicit ?quality= before the probe runs, or it is inert.
+  applyStoredQualityOverride();
+
   try {
     await detectTileMode();
   } catch {
@@ -366,6 +371,8 @@ async function init() {
 
   const { group } = buildPlane('jayhawk');
   heli = group;
+
+  mountGraphicsControl(document.getElementById('top-left-gfx'));
   rotor = group.userData.rotor;
   heli.position.copy(G.pos);
   scene.add(heli);

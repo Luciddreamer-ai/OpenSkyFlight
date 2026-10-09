@@ -236,4 +236,45 @@ const ok = (name) => {
   ok('a 5000-frame session does not grow any buffer without bound');
 }
 
+
+// --- 9. The quality selector maps both ways and always yields a budget -----
+// The games' graphics control reads these, and a typo here would render a menu
+// that silently does nothing on a workstation — the one device that needs it.
+{
+  const { qualityToTier, tierToQuality, getBudget, TIER } = await import(
+    '../js/rendering/CapabilityProbe.js'
+  );
+  for (const [q, tier] of [
+    ['low', TIER.POTATO],
+    ['medium', TIER.BALANCED],
+    ['high', TIER.PERFORMANCE],
+    ['potato', TIER.POTATO],
+    ['performance', TIER.PERFORMANCE],
+  ]) {
+    assert.equal(qualityToTier(q), tier, `qualityToTier('${q}')`);
+    assert.equal(tierToQuality(tier), q.replace('potato', 'low').replace('performance', 'high').replace('medium', 'medium').replace('balanced', 'medium'),
+      `tierToQuality('${tier}')`);
+  }
+  assert.equal(qualityToTier('auto'), null, 'auto must defer to the probe');
+  assert.equal(qualityToTier('nonsense'), null, 'an unknown value must not crash the probe');
+
+  for (const tier of [TIER.POTATO, TIER.BALANCED, TIER.PERFORMANCE]) {
+    const b = getBudget(tier);
+    assert.ok(b && b.pixelRatio > 0, `budget for ${tier} must be usable`);
+    assert.ok(b.maxTotalTiles > 0, `budget for ${tier} needs a tile budget`);
+  }
+  // A null tier means "auto" and must still give something renderable rather
+  // than undefined, because the menu renders before the probe has answered.
+  assert.ok(getBudget(null), 'getBudget(null) must fall back, not return undefined');
+
+  // The performance tier must actually be the biggest budget, or the whole
+  // point of forcing it on a workstation is lost.
+  const lo = getBudget(TIER.POTATO);
+  const hi = getBudget(TIER.PERFORMANCE);
+  assert.ok(hi.maxTotalTiles > lo.maxTotalTiles, 'performance must allow more tiles');
+  assert.ok(hi.lodThreshold > lo.lodThreshold, 'performance must allow more LOD');
+  assert.ok(hi.maxTextureDimension > lo.maxTextureDimension, 'performance must allow bigger textures');
+  ok('quality names, tiers and budgets are consistent in both directions');
+}
+
 console.log(`\ncheck-diagnostics: OK — ${passed} assertions on the diagnostics layer.`);

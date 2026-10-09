@@ -315,3 +315,88 @@ body {
   color: var(--dim);
   font-style: italic;
 }
+
+/* --- Graphics control -----------------------------------------------------
+   Mirrors the sim's quality selector so a workstation owner has the same
+   recourse in a game that they have in free flight. */
+#top-left-gfx {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
+  z-index: 30;
+}
+#graphics-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(125, 249, 255, 0.4);
+  background: rgba(2, 12, 22, 0.82);
+  color: #7df9ff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#graphics-btn[aria-expanded='true'] {
+  background: rgba(125, 249, 255, 0.16);
+}
+#graphics-menu {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  min-width: 208px;
+  padding: 9px;
+  background: rgba(6, 12, 20, 0.96);
+  border: 1px solid rgba(125, 249, 255, 0.34);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6);
+}
+#graphics-menu.hidden {
+  display: none;
+}
+#graphics-menu .gm-title {
+  font-size: 9.5px;
+  letter-spacing: 2.2px;
+  color: #7df9ff;
+  margin-bottom: 7px;
+}
+#graphics-menu button {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  margin-bottom: 3px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #cfe6f2;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#graphics-menu button:hover {
+  background: rgba(125, 249, 255, 0.1);
+}
+#graphics-menu button.on {
+  border-color: rgba(125, 249, 255, 0.55);
+  background: rgba(125, 249, 255, 0.16);
+  color: #fff;
+}
+#graphics-menu .gm-hint {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(125, 249, 255, 0.16);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #8fa8b6;
+}
+#graphics-menu .gm-hint b {
+  color: #cfe6f2;
+}
+#graphics-menu .gm-note {
+  margin-top: 5px;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: #5d7f94;
+}
