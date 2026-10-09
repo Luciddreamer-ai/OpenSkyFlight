@@ -53,6 +53,8 @@ for (const file of files) {
   } catch {
     continue;
   }
+    // Strip block and line comments: JSDoc usage examples are not real imports.
+    src = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
   SPEC_RE.lastIndex = 0;
   let m;
   while ((m = SPEC_RE.exec(src)) !== null) {

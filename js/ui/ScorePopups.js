@@ -5,7 +5,7 @@
  * pointer-events:none so popups never block touch input.
  *
  * Usage:
- *   import { showPopup } from '../../../js/ui/ScorePopups.js';
+ *   import { showPopup } from './js/ui/ScorePopups.js';
  *   showPopup('+100');                    // center-ish, gold
  *   showPopup('TIME BONUS +450', '50%', '30%', '#7cfc00');
  */

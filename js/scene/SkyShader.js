@@ -14,7 +14,7 @@
  *    scene lighting
  *
  * Usage:
- *   import { createSky } from './scene/SkyShader.js';
+ *   import { createSky } from './js/scene/SkyShader.js';
  *   const sky = createSky({ dirLight, ambientLight }); // lights optional
  *   scene.add(sky);
  *   // per frame:
