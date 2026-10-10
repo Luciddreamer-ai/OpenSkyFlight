@@ -26,6 +26,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/voice-quilt.css" />
   <script type="importmap">
   {
     "imports": {
@@ -226,6 +227,29 @@
     </div><!-- /mfd-body -->
   </div>
 
-  <script type="module" src="js/app.js?v=20261006e"></script>
+  <!-- Voice quilt overlay (experimental; opens via 🎙 VOICE or ?voice=1) -->
+  <button id="vq-open" type="button" aria-label="Open voice command panel">🎙 VOICE</button>
+  <div id="vq-root" hidden>
+    <div id="vq-head"><span>📻 VOICE QUILT <span class="vq-sub">experimental</span></span><button id="vq-close" type="button" aria-label="Close voice panel">—</button></div>
+    <div id="vq-cmdrow">
+      <button id="vq-ptt" type="button">🎙 HOLD TO TALK</button>
+      <input id="vq-typed" type="text" placeholder="type a command…" autocomplete="off" enterkeyhint="go" aria-label="Type a voice command" />
+      <button id="vq-sound" type="button" aria-label="Toggle radio sound">🔊</button>
+    </div>
+    <div id="vq-transcript" aria-live="polite"></div>
+    <div id="vq-hint">try: “take off” · “fly to cape edgecumbe” · “turn left” · “speed up” · “status” · “land”</div>
+    <div id="vq-scroll">
+      <svg id="vq-quilt" viewBox="0 0 440 300" preserveAspectRatio="xMidYMid meet" aria-label="Voice quilt trace"></svg>
+      <div id="vq-log"></div>
+    </div>
+    <div id="vq-foot">
+      <button id="vq-sleep" type="button">🌙 distill now</button>
+      <span class="vq-note">Ear→Router→Jev Gate→Prism→Act</span>
+    </div>
+  </div>
+
+  <script src="voice-libs/voice-command.js?v=20261010a"></script>
+  <script src="voice-quilt.js?v=20261010a"></script>
+  <script type="module" src="js/app.js?v=20261010a"></script>
 </body>
 </html>

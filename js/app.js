@@ -32,6 +32,7 @@ import GPUTimer from './benchmark/GPUTimer.js';
 import AircraftManager from './aircraft/AircraftManager.js';
 import ChaseCameraController from './camera/ChaseCameraController.js';
 import FlightPlanRecorder from './flightplan/FlightPlanRecorder.js';
+import VoiceCommander from './voice/VoiceCommander.js';
 import Stats from 'stats.js';
 import { detectTileMode, getTileMode } from './geo/TileUrls.js';
 
@@ -268,6 +269,25 @@ async function initApp() {
   const gpuTimer = new GPUTimer(renderer);
   const flightPlanRecorder = new FlightPlanRecorder();
   const adaptiveQuality = new AdaptiveQualityManager(renderer);
+
+  // --- Voice quilt bridge (experimental; UI gated behind ?voice=1) ---
+  // Exposes a VoiceCommander on window.__osfVoice so the voice-quilt
+  // overlay can drive the sim's own FlightController / autopilot APIs.
+  // The default experience is untouched — the overlay only appears when
+  // the player opens it via the 🎙 VOICE button or ?voice=1.
+  const voiceCommander = new VoiceCommander({
+    flightController,
+    flightPlanRecorder,
+    geoTerrainManager,
+    config: CONFIG,
+    onManualTakeover: () => {
+      if (takeoffT >= 0) {
+        takeoffT = -1; // voice took the controls — cancel the scripted intro
+        Logger.info('App', 'Takeoff intro cancelled by voice command');
+      }
+    },
+  });
+  window.__osfVoice = voiceCommander;
 
   // --- Ground elevation ---
   let groundElevation = 0;
