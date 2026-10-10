@@ -77,8 +77,7 @@ function createVoiceCommand(opts) {
     throw new Error('createVoiceCommand: transcribeUrl is required');
   }
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
   const api = {
     using: 'none',
@@ -227,13 +226,9 @@ function createVoiceCommand(opts) {
       return;
     }
 
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : undefined; // fall back to the browser default (Safari: mp4/aac)
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined; // fall back to the browser default (Safari: mp4/aac)
     try {
-      mediaRecorder = mime
-        ? new MediaRecorder(mediaStream, { mimeType: mime })
-        : new MediaRecorder(mediaStream);
+      mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
     } catch (err) {
       stop();
       setState('error', { path: 'server', error: 'recorder: ' + String(err) });

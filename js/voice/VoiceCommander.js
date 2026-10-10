@@ -274,8 +274,12 @@ export default class VoiceCommander {
     const altFt = Math.round(p.y * 3.28084);
     const spdKt = Math.round(this.fc.throttle * this.config.cameraSpeed * 1.94384);
     const hdg = Math.round(((Math.atan2(-Math.sin(this.fc.yaw), -Math.cos(this.fc.yaw)) * 180) / Math.PI + 360) % 360);
-    const auto = this.rec.autopilotActive ? `autopilot to ${this._flyingTo ? this._flyingTo.name : 'waypoint'}` : 'manual';
-    const where = ll ? `${Math.abs(ll.lat).toFixed(2)}°${ll.lat >= 0 ? 'N' : 'S'} ${Math.abs(ll.lon).toFixed(2)}°${ll.lon >= 0 ? 'E' : 'W'}` : '—';
+    const auto = this.rec.autopilotActive
+      ? `autopilot to ${this._flyingTo ? this._flyingTo.name : 'waypoint'}`
+      : 'manual';
+    const where = ll
+      ? `${Math.abs(ll.lat).toFixed(2)}°${ll.lat >= 0 ? 'N' : 'S'} ${Math.abs(ll.lon).toFixed(2)}°${ll.lon >= 0 ? 'E' : 'W'}`
+      : '—';
     const text = `${altFt.toLocaleString()} ft · ${spdKt} kt · heading ${hdg}° · ${where} · ${auto}`;
     return this._done('status', text);
   }
