@@ -251,6 +251,8 @@ async function initApp() {
     /* non-browser */
   }
   try {
+    // Breadcrumb: if boot ever stalls here again, the overlay names the stage.
+    document.getElementById('boot-status') && (document.getElementById('boot-status').textContent = 'Loading aircraft…');
     selectedPlaneDef = await aircraftManager.loadPlane(_planeType);
     CONFIG.cameraSpeed = Math.round(2400 * (selectedPlaneDef.speed || 1));
     flightController.agility = selectedPlaneDef.agility || 1;
