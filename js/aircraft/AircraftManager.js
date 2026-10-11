@@ -29,8 +29,15 @@ export default class AircraftManager {
     this._axisX = new THREE.Vector3(1, 0, 0);
   }
 
-  // Load a plane by type: 'rafale' uses the GLTF, others use procedural models
-  async loadPlane(type = 'rafale') {
+  // Load a plane by type: 'rafale' uses the GLTF, others use procedural models.
+  // The GLTF path is guarded: THREE's loadAsync has no built-in timeout, and
+  // a stalled asset download used to hang boot on "Loading…" forever (seen on
+  // iOS, where a slow/hung fetch never settles). On timeout or failure we fall
+  // back to the procedural Rafale — same flight model, simpler visuals — so
+  // boot always proceeds. A late-arriving GLTF can never clobber the fallback
+  // (generation guard).
+  async loadPlane(type = 'rafale', { assetTimeoutMs = 20000 } = {}) {
+    const gen = (this._loadGen = (this._loadGen || 0) + 1);
     this.planeType = type;
     // Clear previous
     if (this.group) {
@@ -39,24 +46,46 @@ export default class AircraftManager {
       this.mesh = null;
     }
     if (type === 'rafale') {
-      await this.load('assets/models/rafale/Rafale.gltf');
+      try {
+        await this._withTimeout(this.load('assets/models/rafale/Rafale.gltf', gen), assetTimeoutMs, 'Rafale glTF');
+      } catch (err) {
+        // Invalidate the in-flight GLTF load so its late completion cannot
+        // clobber the fallback scene graph.
+        this._loadGen++;
+        Logger.warn('Aircraft', `Rafale GLTF unavailable (${err.message}) — procedural fallback`);
+        this._useProcedural('rafale');
+      }
     } else {
-      const { group, def } = buildPlane(type);
-      this.planeDef = def;
-      this.group = new THREE.Group();
-      this.group.add(group);
-      this.mesh = group;
-      // Procedural models point nose along -Z already; match Rafale orientation
-      this.scene.add(this.group);
-      this.ready = true;
-      Logger.info('Aircraft', `Procedural plane loaded: ${def.name}`);
+      this._useProcedural(type);
     }
     return this.planeDef;
   }
 
-  async load(url) {
+  _useProcedural(type) {
+    const { group, def } = buildPlane(type);
+    this.planeDef = def;
+    this.group = new THREE.Group();
+    this.group.add(group);
+    this.mesh = group;
+    // Procedural models point nose along -Z already; match Rafale orientation
+    this.scene.add(this.group);
+    this.ready = true;
+    Logger.info('Aircraft', `Procedural plane loaded: ${def.name}`);
+  }
+
+  _withTimeout(promise, ms, label) {
+    let t;
+    const timeout = new Promise((_, reject) => {
+      t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
+  }
+
+  async load(url, gen) {
+    const alive = () => gen === undefined || gen === this._loadGen;
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(url);
+    if (!alive()) return; // timed out or superseded — leave the fallback alone
     this.mesh = gltf.scene;
 
     const box = new THREE.Box3().setFromObject(this.mesh);
@@ -80,6 +109,7 @@ export default class AircraftManager {
     // dead weight — it was decoded, then immediately replaced by the PNG
     // below). The plane's single source of texture is Rafale_texture.png.
     const texture = await new THREE.TextureLoader().loadAsync('assets/models/rafale/Rafale_texture.png');
+    if (!alive()) return; // timed out or superseded — leave the fallback alone
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
     // Apply to every mesh that uses a *texturable* material. Do NOT gate on
