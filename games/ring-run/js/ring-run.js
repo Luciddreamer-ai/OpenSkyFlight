@@ -9,9 +9,11 @@ import * as THREE from 'three';
 import { runGame } from '../../../js/games/shell.js';
 import { makeGate, makeGateTest, disposeTree } from '../../../js/games/marks.js';
 import { buildPlane } from '../../../js/aircraft/planes/PlaneFactory.js';
+import { soundFX } from '../../../js/audio/SoundFX.js';
+import { showPopup } from '../../../js/ui/ScorePopups.js';
 
 const GATE_COUNT = 8;
-const TIME_LIMIT = 75;
+const TIME_LIMIT = 105;
 
 // A ring course laid out as a rough figure-of-eight over the sound, so the
 // player has to turn rather than just hold one heading.
@@ -42,7 +44,7 @@ runGame({
     flight.yaw = 0;
     flight.pitch = 0;
     flight.speed = 60;
-    ctx.input.throttle = 0.45;
+    ctx.input.throttle = 0.6;
 
     const { group } = buildPlane('rafale');
     scene.add(group);
@@ -53,6 +55,7 @@ runGame({
     ctx.next = 0;
     ctx.timeLeft = TIME_LIMIT;
     ctx.started = false;
+    ctx.clearedShown = false;
 
     COURSE.forEach((c, i) => {
       const ground = terrain.getGroundElevation(c.x, c.z);
@@ -91,6 +94,13 @@ runGame({
       ctx.gates[ctx.next].material.color.setHex(0x00ff88);
       ctx.next++;
       _paint(ctx);
+      showPopup('+100');
+      soundFX.pickup();
+    }
+    if (ctx.next >= ctx.tests.length && !ctx.clearedShown) {
+      ctx.clearedShown = true;
+      showPopup(`TIME BONUS +${Math.round(Math.max(0, ctx.timeLeft) * 10)}`, '50%', '28%', '#7cfc00');
+      soundFX.win();
     }
   },
 
@@ -100,7 +110,8 @@ runGame({
     if (ctx.next < ctx.tests.length) {
       const dist = ctx.tests[ctx.next].distance(ctx.flight.position);
       if (el) el.style.width = `${Math.max(0, 100 - Math.min(100, dist / 3))}%`;
-      if (d) d.textContent = `${Math.round(dist)} m to gate ${ctx.next + 1}`;
+      if (d)
+        d.textContent = `${Math.round(dist)} m to gate ${ctx.next + 1} — ${Math.max(0, ctx.timeLeft).toFixed(1)}s left`;
     } else if (el) el.style.width = '100%';
   },
 
