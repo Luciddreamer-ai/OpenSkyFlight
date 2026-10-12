@@ -69,10 +69,16 @@ export async function detectTileMode() {
   }
 
   try {
-    // Terrarium zoom-0 tile exists upstream, so a working proxy answers 200.
-    // Any non-OK response (e.g. GitHub Pages 404) means no proxy is present.
-    const res = await fetch('/tiles/terrarium/0/0/0.png', { method: 'HEAD', cache: 'no-store' });
-    mode = res.ok ? 'proxy' : 'direct';
+    // Terrarium zoom-0 tile exists upstream, so a working proxy answers 200
+    // with an actual PNG. Any non-OK response (e.g. GitHub Pages 404) means
+    // no proxy is present. We also verify Content-Type because SPA fallbacks
+    // (e.g. Cloudflare Pages) serve the landing HTML with 200 for unknown
+    // paths — res.ok alone would falsely select 'proxy' mode.
+    const res = await fetch('/tiles/terrarium/0/0/0.png', { method: 'GET', cache: 'no-store' });
+    const ct = res.headers.get('content-type') || '';
+    mode = res.ok && ct.includes('image/') ? 'proxy' : 'direct';
+    // Drain the body so the connection can be reused.
+    if (res.body) await res.arrayBuffer().catch(() => {});
   } catch {
     mode = 'direct';
   }
